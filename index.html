@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Hollow Vigil</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="app"></main>
+  <dialog id="spell-dialog"></dialog>
+
+  <script src="lore.js"></script>
+  <script src="spells.js"></script>
+  <script src="characters.js"></script>
+  <script>
+    const app = document.getElementById("app");
+    const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    const img = (path) => encodeURI(path);
+    const PREMISE = LORE.premise;
+    // Lore for a character, with fallbacks if its .md file is missing.
+    const lore = (c) => LORE.characters[c.id] || { name: c.id, epithet: "", html: "<p>No lore file yet.</p>" };
+
+    function renderHome() {
+      document.title = PREMISE.title;
+      app.innerHTML = `
+        <header class="premise">
+          <p class="tagline">${esc(PREMISE.tagline)}</p>
+          <h1>${esc(PREMISE.title)}</h1>
+          <div class="rule"><span>✦</span></div>
+          <div class="prose">${PREMISE.html}</div>
+        </header>
+        <section class="roster">
+          ${CHARACTERS.map((c) => `
+            <a class="card" href="#/${c.id}">
+              <div class="card-img"><img src="${img(c.image)}" alt="" loading="lazy"></div>
+              <span class="card-name">${esc(lore(c).name)}</span>
+            </a>`).join("")}
+        </section>
+        ${LORE.dmNotes ? `<footer class="dm-link"><a href="#/dm-notes">DM Notes</a></footer>` : ""}`;
+    }
+
+    const sign = (n) => (typeof n === "number" ? (n < 0 ? "−" + Math.abs(n) : "+" + n) : n);
+    const ABILITIES = ["str", "dex", "con", "int", "wis", "cha"];
+    const spellLink = (name) => SPELLS[name] ? `<button class="spell" data-spell="${esc(name)}">${esc(name)}</button>` : esc(name);
+
+    // Per-character play state, kept in this browser only:
+    // { hp, temp, slots: { "1": used }, res: { "Lay on Hands": used } }
+    const stateKey = (id) => `hollow-vigil:state:${id}`;
+    function loadState(c) {
+      let s = {};
+      try { s = JSON.parse(localStorage.getItem(stateKey(c.id))) || {}; } catch {}
+      return { hp: s.hp ?? c.stats.hp, temp: s.temp ?? 0, slots: s.slots || {}, res: s.res || {} };
+    }
+    function saveState(c, s) {
+      try { localStorage.setItem(stateKey(c.id), JSON.stringify(s)); } catch {}
+    }
+
+    // A row of clickable pips; filled = available, hollow = spent (spent ones fill from the right).
+    function pipRow(kind, key, max, used = 0) {
+      return Array.from({ length: max }, (_, i) => {
+        const spent = i >= max - used;
+        return `<button class="pip${spent ? " spent" : ""}" data-pip="${kind}" data-key="${esc(key)}" data-index="${i}" data-max="${max}"
+          aria-label="${esc(key)} ${i + 1}${spent ? ", spent" : ""}"></button>`;
+      }).join("");
+    }
+    const ordinal = (n) => n + (["th", "st", "nd", "rd"][n] || "th");
+
+    function list(title, items = [], wide = false) {
+      if (!items.length) return `<section class="block"><h3>${title}</h3><p class="empty">—</p></section>`;
+      const body = typeof items[0] === "string"
+        ? `<ul class="chips">${items.map((s) => `<li>${esc(s)}</li>`).join("")}</ul>`
+        : `<dl>${items.map((i) => `<dt>${spellLink(i.name)}</dt><dd>${esc(i.text)}</dd>`).join("")}</dl>`;
+      return `<section class="block${wide ? " wide" : ""}"><h3>${title}</h3>${body}</section>`;
+    }
+
+    // Six ability cells: modifier, score, and saving throw (● = proficient).
+    function abilityRow(c) {
+      if (!c.abilities) return "";
+      const cells = ABILITIES.map((k) => {
+        const a = c.abilities[k];
+        const prof = (c.saves || []).includes(k);
+        return `<div><span>${k}</span><b>${sign(Math.floor((a.score - 10) / 2))}</b><small>${a.score}</small>
+          <em class="${prof ? "prof" : ""}">${prof ? "● " : ""}Save ${sign(a.save)}</em></div>`;
+      }).join("");
+      return `<div class="abilities">${cells}</div>${c.savesNote ? `<p class="note">${esc(c.savesNote)}</p>` : ""}`;
+    }
+
+    function attackList(attacks = []) {
+      if (!attacks.length) return list("Attacks");
+      return `<section class="block wide"><h3>Attacks</h3><table class="attacks">
+        <tr><th>Weapon</th><th>Hit</th><th>Damage</th><th>Notes</th></tr>
+        ${attacks.map((a) => `<tr><td>${esc(a.name)}</td><td>${sign(a.hit)}</td><td>${esc(a.damage)}</td><td>${esc(a.notes || "")}</td></tr>`).join("")}
+      </table></section>`;
+    }
+
+    // Spells grouped by level; each level row carries its slot pips.
+    // byLevel entries are a spell name, or { name, note } for things like "always prepared".
+    function spellBlock(c, st) {
+      const sc = c.spellcasting;
+      if (!sc) return "";
+      const rows = Object.entries(sc.byLevel || {}).map(([lvl, spells]) => {
+        const slots = sc.slots?.[lvl];
+        const chips = spells.map((s) => {
+          const { name, note } = typeof s === "string" ? { name: s } : s;
+          return `<li>${spellLink(name)}${note ? ` <small>${esc(note)}</small>` : ""}</li>`;
+        }).join("");
+        return `<div class="spell-row">
+          <div class="spell-lvl">${lvl === "0" ? "Cantrips" : ordinal(+lvl)}${slots ? `<span class="pips">${pipRow("slot", lvl, slots, st.slots[lvl])}</span>` : ""}</div>
+          <ul class="chips">${chips}</ul>
+        </div>`;
+      }).join("");
+      return `<section class="block wide"><h3>Spellcasting</h3>
+        <p class="spell-meta">Save DC <b>${esc(sc.dc)}</b> · Spell attack <b>${sign(sc.attack)}</b></p>
+        ${rows}
+      </section>`;
+    }
+
+    // HP, temp HP, limited-use resources and rest buttons.
+    function tracker(c, st) {
+      if (typeof c.stats.hp !== "number") return "";
+      const max = c.stats.hp;
+      const resources = (c.resources || []).map((r) => {
+        const used = st.res[r.name] || 0;
+        const ctrl = r.max <= 10
+          ? `<span class="pips">${pipRow("res", r.name, r.max, used)}</span>`
+          : `<span class="pool"><b>${r.max - used}</b> / ${r.max}
+              <button data-res="${esc(r.name)}" data-step="-5">−5</button><button data-res="${esc(r.name)}" data-step="-1">−1</button><button data-res="${esc(r.name)}" data-step="1">+1</button></span>`;
+        return `<div class="res"><span class="res-name">${esc(r.name)} <small>${r.recharge === "short" ? "short rest" : "long rest"}</small></span>${ctrl}</div>`;
+      }).join("");
+      return `<section class="tracker">
+        <div class="hp-row">
+          <div class="hp${st.hp <= max / 2 ? " bloodied" : ""}${st.hp === 0 ? " down" : ""}">
+            <span>Hit Points</span><b>${st.hp}</b><i>/ ${max}</i>${st.temp ? `<em>+${st.temp} temp</em>` : ""}
+          </div>
+          <div class="hp-controls">
+            <input id="hp-amount" type="number" min="0" inputmode="numeric" placeholder="Amount">
+            <button data-hp="damage">Damage</button><button data-hp="heal">Heal</button><button data-hp="temp">Temp HP</button>
+          </div>
+        </div>
+        ${resources ? `<div class="resources">${resources}</div>` : ""}
+        <div class="rests"><button class="rest" data-rest="short">Short rest</button><button class="rest" data-rest="long">Long rest</button></div>
+      </section>`;
+    }
+
+    function renderCharacter(c) {
+      const i = CHARACTERS.indexOf(c);
+      const prev = CHARACTERS[(i - 1 + CHARACTERS.length) % CHARACTERS.length];
+      const next = CHARACTERS[(i + 1) % CHARACTERS.length];
+      const s = c.stats;
+      const l = lore(c);
+      const st = loadState(c);
+      document.title = `${l.name} · ${PREMISE.title}`;
+      app.innerHTML = `
+        <nav class="topnav">
+          <a href="#/">← Roster</a>
+          <span>
+            <a href="#/${prev.id}">‹ ${esc(lore(prev).name)}</a>
+            <a href="#/${next.id}">${esc(lore(next).name)} ›</a>
+          </span>
+        </nav>
+        <article class="sheet">
+          <div class="hero">
+            <a href="${img(c.image)}" target="_blank" title="Open full size"><img class="portrait" src="${img(c.image)}" alt="${esc(l.name)}"></a>
+            <div class="intro">
+              <h2>${esc(l.name)}</h2>
+              ${l.aka ? `<p class="aka">${esc(l.aka)}</p>` : ""}
+              <p class="epithet">${esc(l.epithet)}</p>
+              <div class="prose">${l.html}</div>
+              ${l.secret ? `<details class="secret"><summary><span class="closed">Reveal</span><span class="opened">Hide</span> Secret</summary><div class="prose">${l.secret}</div></details>` : ""}
+            </div>
+          </div>
+          <div class="rule"><span>✦</span></div>
+          <div class="statline">
+            <div><b>${esc(s.level)}</b><span>Level</span></div>
+            ${typeof s.hp === "number" ? "" : `<div><b>${esc(s.hp)}</b><span>Hit Points</span></div>`}
+            <div><b>${esc(s.ac)}</b><span>Armor Class</span></div>
+            <div><b>${esc(s.speed)}</b><span>Speed</span></div>
+            <div><b>${sign(s.initiative ?? "—")}</b><span>Initiative</span></div>
+            <div><b>${esc(s.passivePerception ?? "—")}</b><span>Passive Perception</span></div>
+          </div>
+          ${abilityRow(c)}
+          ${tracker(c, st)}
+          <div class="blocks">
+            ${list("Skills", c.skills, true)}
+            ${attackList(c.attacks)}
+            ${list("Actions", c.actions)}
+            ${list("Bonus Actions", c.bonusActions)}
+            ${list("Reactions", c.reactions)}
+            ${list("Feats & Traits", c.feats)}
+            ${spellBlock(c, st)}
+          </div>
+        </article>`;
+    }
+
+    // DM-only page: content stays folded away until revealed, safe to have on a shared screen.
+    function renderNotes() {
+      const n = LORE.dmNotes;
+      document.title = `${n.title} · ${PREMISE.title}`;
+      app.innerHTML = `
+        <nav class="topnav"><a href="#/">← Roster</a></nav>
+        <article class="notes">
+          <h2>${esc(n.title)}</h2>
+          <details class="secret"><summary><span class="closed">Reveal</span><span class="opened">Hide</span> DM Notes</summary>
+            <div class="prose">${n.html}</div>
+          </details>
+        </article>`;
+    }
+
+    function route() {
+      const id = location.hash.replace(/^#\/?/, "");
+      const c = CHARACTERS.find((x) => x.id === id);
+      if (c) renderCharacter(c);
+      else if (id === "dm-notes" && LORE.dmNotes) renderNotes();
+      else renderHome();
+      window.scrollTo(0, 0);
+    }
+
+    const dialog = document.getElementById("spell-dialog");
+    function showSpell(name) {
+      const s = SPELLS[name];
+      const lvl = s.level === 0 ? `${s.school} cantrip` : `Level ${s.level} ${s.school.toLowerCase()}${s.ritual ? " (ritual)" : ""}`;
+      dialog.innerHTML = `
+        <button class="close" aria-label="Close">×</button>
+        <h3>${esc(name)}</h3>
+        <p class="spell-level">${esc(lvl)}</p>
+        <dl class="spell-facts">
+          <dt>Casting time</dt><dd>${esc(s.time)}</dd>
+          <dt>Range</dt><dd>${esc(s.range)}</dd>
+          <dt>Components</dt><dd>${esc(s.components)}</dd>
+          <dt>Duration</dt><dd>${esc(s.duration)}</dd>
+        </dl>
+        <p>${esc(s.text)}</p>
+        ${s.higher ? `<p class="spell-higher"><b>At higher levels.</b> ${esc(s.higher)}</p>` : ""}`;
+      dialog.showModal();
+    }
+
+    document.addEventListener("click", (e) => {
+      const spell = e.target.closest("[data-spell]");
+      if (spell) return showSpell(spell.dataset.spell);
+      if (e.target === dialog || e.target.closest(".close")) return dialog.close();
+
+      const id = location.hash.replace(/^#\/?/, "");
+      const c = CHARACTERS.find((x) => x.id === id);
+      if (!c) return;
+      const st = loadState(c);
+      const max = c.stats.hp;
+      const pip = e.target.closest("[data-pip]");
+      const res = e.target.closest("[data-res]");
+      const hp = e.target.closest("[data-hp]");
+      const rest = e.target.closest("[data-rest]");
+
+      if (pip) {
+        // Clicking a filled pip spends down to it; clicking a spent pip restores up to it.
+        const bucket = pip.dataset.pip === "slot" ? st.slots : st.res;
+        const { key } = pip.dataset, i = +pip.dataset.index, n = +pip.dataset.max;
+        bucket[key] = i >= n - (bucket[key] || 0) ? n - i - 1 : n - i;
+      } else if (res) {
+        const r = c.resources.find((x) => x.name === res.dataset.res);
+        st.res[r.name] = Math.min(r.max, Math.max(0, (st.res[r.name] || 0) - +res.dataset.step));
+      } else if (hp) {
+        const amount = Math.max(0, parseInt(document.getElementById("hp-amount").value, 10) || 0);
+        if (!amount) return;
+        if (hp.dataset.hp === "damage") {
+          const absorbed = Math.min(st.temp, amount);  // temp HP soaks damage first
+          st.temp -= absorbed;
+          st.hp = Math.max(0, st.hp - (amount - absorbed));
+        } else if (hp.dataset.hp === "heal") {
+          st.hp = Math.min(max, st.hp + amount);
+        } else {
+          st.temp = Math.max(st.temp, amount);  // temp HP don't stack; keep the higher
+        }
+      } else if (rest) {
+        if (rest.dataset.rest === "long") {
+          Object.assign(st, { hp: max, temp: 0, slots: {}, res: {} });
+        } else {
+          for (const r of c.resources || []) if (r.recharge === "short") delete st.res[r.name];
+        }
+      } else return;
+      saveState(c, st);
+      renderCharacter(c);
+    });
+
+    // Arrow keys flip between characters.
+    document.addEventListener("keydown", (e) => {
+      if (dialog.open) return;  // Esc closes the popup instead of leaving the page
+      if (e.target.matches("input, textarea")) return;  // typing in the HP box shouldn't flip pages
+      const id = location.hash.replace(/^#\/?/, "");
+      const i = CHARACTERS.findIndex((x) => x.id === id);
+      if (i < 0) return;
+      if (e.key === "ArrowRight") location.hash = "/" + CHARACTERS[(i + 1) % CHARACTERS.length].id;
+      if (e.key === "ArrowLeft") location.hash = "/" + CHARACTERS[(i - 1 + CHARACTERS.length) % CHARACTERS.length].id;
+      if (e.key === "Escape") location.hash = "/";
+    });
+
+    window.addEventListener("hashchange", route);
+    route();
+  </script>
+</body>
+</html>
