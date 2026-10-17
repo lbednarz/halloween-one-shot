@@ -297,3 +297,31 @@ dt button.spell { font-weight: 600; }
   .statline { grid-auto-flow: row; grid-template-columns: repeat(3, 1fr); }
 }
 .abilities + .tracker { margin-top: 18px; }
+
+/* ---------- items & potions ---------- */
+.items dt { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+/* ---------- quick list / all spells toggle ---------- */
+.spell-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.spell-head .spell-meta { margin: 0; }
+.spell-view { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+.spell-view button {
+  font: 13px var(--display); letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted); background: none; border: 0; padding: 5px 14px; cursor: pointer;
+}
+.spell-view button.on { background: var(--accent); color: #1a1614; }
+.spell-view button:not(.on):hover { color: var(--accent); }
+
+/* ---------- password unlock for encrypted secrets ---------- */
+.unlock { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 4px 18px 16px; }
+.unlock input {
+  font: 16px var(--body); color: var(--ink); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; width: 220px;
+}
+.unlock input:focus { outline: 1px solid var(--accent); }
+.unlock button {
+  font: 13px var(--display); letter-spacing: .1em; text-transform: uppercase; color: var(--ink);
+  background: none; border: 1px solid var(--accent); border-radius: 999px; padding: 5px 14px; cursor: pointer;
+}
+.unlock button:hover { background: var(--accent); color: #1a1614; }
+.unlock-msg { flex-basis: 100%; margin: 0; color: var(--muted); font-size: 15px; font-style: italic; min-height: 1em; }

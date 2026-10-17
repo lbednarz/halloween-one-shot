@@ -42,6 +42,87 @@
         ${LORE.dmNotes ? `<footer class="dm-link"><a href="#/dm-notes">DM Notes</a></footer>` : ""}`;
     }
 
+    // ---------- encrypted secrets ----------
+    // lore.js holds secrets as { iter, iv, ct, slots: [{ who, salt, iv, key }] } (see build.py).
+    // A password unwraps a slot's key, which decrypts the text. Unlocked text and working
+    // passwords are kept only for this browser tab.
+    const unlocked = new Map();  // secret id -> decrypted html
+    const b64d = (s) => Uint8Array.from(atob(s), (ch) => ch.charCodeAt(0));
+    const pwKey = "hollow-vigil:passwords";
+    function savedPasswords() {
+      try { return JSON.parse(sessionStorage.getItem(pwKey)) || {}; } catch { return {}; }
+    }
+    function rememberPassword(id, who, password) {
+      const saved = savedPasswords();
+      saved[who === "master" ? "master" : id] = password;
+      try { sessionStorage.setItem(pwKey, JSON.stringify(saved)); } catch {}
+    }
+
+    async function decryptSecret(enc, password) {
+      const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveKey"]);
+      for (const slot of enc.slots) {
+        try {
+          const kek = await crypto.subtle.deriveKey(
+            { name: "PBKDF2", salt: b64d(slot.salt), iterations: enc.iter, hash: "SHA-256" },
+            base, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+          const raw = await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64d(slot.iv) }, kek, b64d(slot.key));
+          const key = await crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["decrypt"]);
+          const html = new TextDecoder().decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64d(enc.iv) }, key, b64d(enc.ct)));
+          return { html, who: slot.who };
+        } catch {}  // wrong password for this slot; try the next
+      }
+      return null;
+    }
+
+    // Collapsible secret box: decrypted text if unlocked this tab, otherwise a password form.
+    function secretBox(id, label) {
+      const body = unlocked.has(id)
+        ? `<div class="prose">${unlocked.get(id)}</div>`
+        : `<form class="unlock" data-unlock="${esc(id)}">
+            <input type="password" placeholder="Password" autocomplete="off" aria-label="Password for ${esc(label)}">
+            <button>Unlock</button><p class="unlock-msg"></p>
+          </form>`;
+      return `<details class="secret" data-secret="${esc(id)}"><summary><span class="closed">Reveal</span><span class="opened">Hide</span> ${esc(label)}</summary><div class="secret-body">${body}</div></details>`;
+    }
+    const encryptedFor = (id) => (id === "dm-notes" ? LORE.dmNotes.html : LORE.characters[id].secret);
+
+    async function unlock(details, password, quiet) {
+      const id = details.dataset.secret, msg = details.querySelector(".unlock-msg");
+      if (!window.crypto?.subtle) {
+        if (msg) msg.textContent = "Unlocking needs the https link (or localhost).";
+        return false;
+      }
+      const result = await decryptSecret(encryptedFor(id), password);
+      if (!result) {
+        if (msg && !quiet) msg.textContent = "That's not it.";
+        return false;
+      }
+      unlocked.set(id, result.html);
+      rememberPassword(id, result.who, password);
+      details.querySelector(".secret-body").innerHTML = `<div class="prose">${result.html}</div>`;
+      return true;
+    }
+
+    // On opening a locked secret, quietly try passwords already entered in this tab.
+    document.addEventListener("toggle", async (e) => {
+      const details = e.target;
+      if (!details.matches?.("details[data-secret]") || !details.open || unlocked.has(details.dataset.secret)) return;
+      const saved = savedPasswords();
+      for (const pw of [saved[details.dataset.secret], saved.master].filter(Boolean)) {
+        if (await unlock(details, pw, true)) return;
+      }
+      details.querySelector(".unlock input")?.focus();
+    }, true);
+
+    document.addEventListener("submit", (e) => {
+      const form = e.target.closest("form[data-unlock]");
+      if (!form) return;
+      e.preventDefault();
+      const input = form.querySelector("input");
+      form.querySelector(".unlock-msg").textContent = "Unlocking…";
+      unlock(form.closest("details"), input.value, false).then((ok) => { if (!ok) input.select(); });
+    });
+
     const sign = (n) => (typeof n === "number" ? (n < 0 ? "−" + Math.abs(n) : "+" + n) : n);
     const ABILITIES = ["str", "dex", "con", "int", "wis", "cha"];
     const spellLink = (name) => SPELLS[name] ? `<button class="spell" data-spell="${esc(name)}">${esc(name)}</button>` : esc(name);
@@ -96,12 +177,28 @@
       </table></section>`;
     }
 
+    // Which spell list a character page shows when it has a quickList ("quick" or "all"); per browser.
+    const viewKey = (id) => `hollow-vigil:spellview:${id}`;
+    function loadView(id) {
+      try { return localStorage.getItem(viewKey(id)) || "quick"; } catch { return "quick"; }
+    }
+
     // Spells grouped by level; each level row carries its slot pips.
     // byLevel entries are a spell name, or { name, note } for things like "always prepared".
+    // An optional quickList (array of names) adds a Quick list / All spells toggle.
     function spellBlock(c, st) {
       const sc = c.spellcasting;
       if (!sc) return "";
-      const rows = Object.entries(sc.byLevel || {}).map(([lvl, spells]) => {
+      const nameOf = (s) => (typeof s === "string" ? s : s.name);
+      const all = Object.values(sc.byLevel || {}).flat();
+      const quick = sc.quickList ? new Set(sc.quickList) : null;
+      const view = quick ? loadView(c.id) : "all";
+      const toggle = quick ? `<div class="spell-view">
+          <button data-spellview="quick" class="${view === "quick" ? "on" : ""}">Quick list (${all.filter((s) => quick.has(nameOf(s))).length})</button>
+          <button data-spellview="all" class="${view === "all" ? "on" : ""}">All spells (${all.length})</button>
+        </div>` : "";
+      const rows = Object.entries(sc.byLevel || {}).map(([lvl, levelSpells]) => {
+        const spells = view === "quick" ? levelSpells.filter((s) => quick.has(nameOf(s))) : levelSpells;
         const slots = sc.slots?.[lvl];
         const chips = spells.map((s) => {
           const { name, note } = typeof s === "string" ? { name: s } : s;
@@ -113,9 +210,21 @@
         </div>`;
       }).join("");
       return `<section class="block wide"><h3>Spellcasting</h3>
-        <p class="spell-meta">Save DC <b>${esc(sc.dc)}</b> · Spell attack <b>${sign(sc.attack)}</b></p>
+        <div class="spell-head">
+          <p class="spell-meta">Save DC <b>${esc(sc.dc)}</b> · Spell attack <b>${sign(sc.attack)}</b></p>
+          ${toggle}
+        </div>
         ${rows}
       </section>`;
+    }
+
+    // Consumable items (potions etc.): pips tick off uses and never refill on a rest.
+    function itemBlock(c, st) {
+      if (!c.items?.length) return "";
+      return `<section class="block wide"><h3>Items & Potions</h3><dl class="items">
+        ${c.items.map((it) => `<dt>${esc(it.name)}${it.qty ? `<span class="pips">${pipRow("res", it.name, it.qty, st.res[it.name])}</span>` : ""}</dt>
+          <dd>${esc(it.text)}</dd>`).join("")}
+      </dl></section>`;
     }
 
     // HP, temp HP, limited-use resources and rest buttons.
@@ -169,7 +278,7 @@
               ${l.aka ? `<p class="aka">${esc(l.aka)}</p>` : ""}
               <p class="epithet">${esc(l.epithet)}</p>
               <div class="prose">${l.html}</div>
-              ${l.secret ? `<details class="secret"><summary><span class="closed">Reveal</span><span class="opened">Hide</span> Secret</summary><div class="prose">${l.secret}</div></details>` : ""}
+              ${l.secret ? secretBox(c.id, "Secret") : ""}
             </div>
           </div>
           <div class="rule"><span>✦</span></div>
@@ -190,6 +299,7 @@
             ${list("Bonus Actions", c.bonusActions)}
             ${list("Reactions", c.reactions)}
             ${list("Feats & Traits", c.feats)}
+            ${itemBlock(c, st)}
             ${spellBlock(c, st)}
           </div>
         </article>`;
@@ -203,9 +313,7 @@
         <nav class="topnav"><a href="#/">← Roster</a></nav>
         <article class="notes">
           <h2>${esc(n.title)}</h2>
-          <details class="secret"><summary><span class="closed">Reveal</span><span class="opened">Hide</span> DM Notes</summary>
-            <div class="prose">${n.html}</div>
-          </details>
+          ${secretBox("dm-notes", "DM Notes")}
         </article>`;
     }
 
@@ -245,6 +353,12 @@
       const id = location.hash.replace(/^#\/?/, "");
       const c = CHARACTERS.find((x) => x.id === id);
       if (!c) return;
+      const view = e.target.closest("[data-spellview]");
+      if (view) {
+        try { localStorage.setItem(viewKey(c.id), view.dataset.spellview); } catch {}
+        return renderCharacter(c);
+      }
+
       const st = loadState(c);
       const max = c.stats.hp;
       const pip = e.target.closest("[data-pip]");
@@ -274,7 +388,9 @@
         }
       } else if (rest) {
         if (rest.dataset.rest === "long") {
-          Object.assign(st, { hp: max, temp: 0, slots: {}, res: {} });
+          // Rests restore everything except consumable items.
+          const kept = Object.fromEntries((c.items || []).filter((it) => it.name in st.res).map((it) => [it.name, st.res[it.name]]));
+          Object.assign(st, { hp: max, temp: 0, slots: {}, res: kept });
         } else {
           for (const r of c.resources || []) if (r.recharge === "short") delete st.res[r.name];
         }

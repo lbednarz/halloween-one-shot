@@ -1,2 +1,4 @@
 __pycache__/
 *.pyc
+# DM-only: unlock passwords for the encrypted secrets
+passwords.json
