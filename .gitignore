@@ -2,3 +2,5 @@ __pycache__/
 *.pyc
 # DM-only: unlock passwords for the encrypted secrets
 passwords.json
+# Character votes from friends (SQLite)
+votes.db

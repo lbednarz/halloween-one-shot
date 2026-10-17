@@ -20,6 +20,12 @@ Anything below a `## Secret` heading is hidden on the page behind a reveal toggl
 Secrets and the DM notes are encrypted (AES-GCM) before they go into lore.js:
 each can be unlocked with that character's password or the DM master password,
 both kept in passwords.json (created with random passwords on first build; never served).
+
+With --serve, friends can rank their top 3 characters from the home page. Ballots are
+stored in votes.db (SQLite, never served); one per name, and resubmitting replaces it.
+    POST /api/vote     {"name": ..., "picks": [id1, id2, id3]}
+    GET  /api/voters   names of everyone who has voted
+    POST /api/results  {"password": <DM master>} -> point totals (3/2/1) and every ballot
 """
 import argparse
 import base64
@@ -27,9 +33,11 @@ import os
 import secrets
 import functools
 import hashlib
+import hmac
 import json
 import re
 import socket
+import sqlite3
 import threading
 import time
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -45,6 +53,7 @@ OUT = ROOT / "lore.js"
 SECRET = re.compile(r"^##\s*Secret\s*$", re.M | re.I)
 PASSWORDS = ROOT / "passwords.json"
 PBKDF2_ITERATIONS = 200_000
+VOTES_DB = ROOT / "votes.db"
 
 WORDS = """candle raven thorn lantern hollow moth bramble crow ember ash bone grave
 wick hemlock thistle owl cellar spire rook fog mire willow nettle cauldron
@@ -108,11 +117,15 @@ def encrypt(html, passwords):
     return {"iter": PBKDF2_ITERATIONS, "iv": b64(iv), "ct": b64(AESGCM(key).encrypt(iv, html.encode(), None)), "slots": slots}
 
 
+def character_ids():
+    return [p.stem for p in sorted(LORE.glob("*.md")) if p.stem not in ("premise", "dm-notes") and not p.stem.startswith("_")]
+
+
 def build():
     premise = parse(LORE / "premise.md")
     notes_path = LORE / "dm-notes.md"
     notes = parse(notes_path) if notes_path.exists() else None
-    characters = {p.stem: parse(p) for p in sorted(LORE.glob("*.md")) if p.stem not in ("premise", "dm-notes") and not p.stem.startswith("_")}
+    characters = {cid: parse(LORE / f"{cid}.md") for cid in character_ids()}
 
     # Replace every plaintext secret (and the DM notes) with its encrypted form.
     pw = load_passwords([cid for cid, c in characters.items() if "secret" in c])
@@ -152,9 +165,83 @@ PUBLIC_FILES = {"/", "/index.html", "/style.css", "/lore.js", "/characters.js", 
 PUBLIC_DIRS = ("/character images/",)
 
 
+# ---------- voting ----------
+db_lock = threading.Lock()
+
+
+def db():
+    conn = sqlite3.connect(VOTES_DB)
+    conn.execute("""CREATE TABLE IF NOT EXISTS votes (
+        name_key TEXT PRIMARY KEY, name TEXT NOT NULL,
+        first TEXT NOT NULL, second TEXT NOT NULL, third TEXT NOT NULL,
+        submitted TEXT NOT NULL)""")
+    return conn
+
+
+def record_vote(body):
+    """Validate a ballot and store it, replacing any earlier ballot under the same name."""
+    name = " ".join(str(body.get("name", "")).split())[:40]
+    picks = body.get("picks")
+    valid = set(character_ids())
+    if not name:
+        return 400, {"error": "Please enter your name."}
+    if not (isinstance(picks, list) and len(picks) == 3 and all(p in valid for p in picks)):
+        return 400, {"error": "Please pick three characters."}
+    if len(set(picks)) != 3:
+        return 400, {"error": "Pick three different characters."}
+    with db_lock, db() as conn:
+        replaced = conn.execute("SELECT 1 FROM votes WHERE name_key = ?", (name.casefold(),)).fetchone() is not None
+        conn.execute("INSERT OR REPLACE INTO votes VALUES (?, ?, ?, ?, ?, ?)",
+                     (name.casefold(), name, *picks, time.strftime("%Y-%m-%d %H:%M")))
+    return 200, {"ok": True, "replaced": replaced}
+
+
+def voter_names():
+    with db() as conn:
+        return [r[0] for r in conn.execute("SELECT name FROM votes ORDER BY submitted, name")]
+
+
+def results(body):
+    master = json.loads(PASSWORDS.read_text()).get("master", "") if PASSWORDS.exists() else ""
+    if not master or not hmac.compare_digest(str(body.get("password", "")), master):
+        return 403, {"error": "That's not the DM password."}
+    with db() as conn:
+        rows = conn.execute("SELECT name, first, second, third, submitted FROM votes ORDER BY submitted").fetchall()
+    tally = {cid: {"id": cid, "points": 0, "first": 0, "second": 0, "third": 0} for cid in character_ids()}
+    for _, *picks, _ in rows:
+        for rank, (cid, points) in enumerate(zip(picks, (3, 2, 1))):
+            if cid in tally:
+                tally[cid]["points"] += points
+                tally[cid][("first", "second", "third")[rank]] += 1
+    ranked = sorted(tally.values(), key=lambda t: (-t["points"], -t["first"], -t["second"]))
+    ballots = [{"name": n, "picks": [a, b, c], "submitted": s} for n, a, b, c, s in rows]
+    return 200, {"tally": ranked, "ballots": ballots}
+
+
 class QuietHandler(SimpleHTTPRequestHandler):
     def log_message(self, *args):
         pass
+
+    def send_json(self, status, payload):
+        data = json.dumps(payload).encode()
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def do_POST(self):
+        path = urlsplit(self.path).path
+        if path not in ("/api/vote", "/api/results"):
+            return self.send_error(404)
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(min(length, 4096)) or b"{}")
+            if not isinstance(body, dict):
+                raise ValueError
+        except ValueError:
+            return self.send_json(400, {"error": "Bad request."})
+        self.send_json(*(record_vote(body) if path == "/api/vote" else results(body)))
 
     def is_public(self):
         path = unquote(urlsplit(self.path).path)
@@ -163,6 +250,8 @@ class QuietHandler(SimpleHTTPRequestHandler):
         return path in PUBLIC_FILES or (path.startswith(PUBLIC_DIRS) and not path.endswith("/"))
 
     def do_GET(self):
+        if urlsplit(self.path).path == "/api/voters":
+            return self.send_json(200, {"voters": voter_names()})
         if not self.is_public():
             return self.send_error(404)
         super().do_GET()

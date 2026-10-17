@@ -39,8 +39,103 @@
               <span class="card-name">${esc(lore(c).name)}</span>
             </a>`).join("")}
         </section>
-        ${LORE.dmNotes ? `<footer class="dm-link"><a href="#/dm-notes">DM Notes</a></footer>` : ""}`;
+        ${voteSection()}
+        <footer class="dm-link">${LORE.dmNotes ? `<a href="#/dm-notes">DM Notes</a> · ` : ""}<a href="#/votes">Vote Results</a></footer>`;
+      loadVoters();
     }
+
+    // ---------- voting (needs the hosted site: build.py --serve) ----------
+    const canVote = location.protocol !== "file:";
+    function voteSection() {
+      const options = `<option value="">Choose…</option>` +
+        CHARACTERS.map((c) => `<option value="${c.id}">${esc(lore(c).name)}</option>`).join("");
+      return `<section class="vote">
+        <h2>Cast Your Vote</h2>
+        <p>Rank the three characters you'd most like to play. Submitting again under the same name replaces your ballot.</p>
+        <form data-vote>
+          <label class="vote-name">Your name <input name="name" maxlength="40" autocomplete="name" required></label>
+          ${["1st", "2nd", "3rd"].map((r) => `<label>${r} choice <select name="pick" required>${options}</select></label>`).join("")}
+          <button ${canVote ? "" : "disabled"}>Submit ballot</button>
+          <p class="vote-msg">${canVote ? "" : "Voting works on the hosted site, not when opening the file directly."}</p>
+        </form>
+        <p class="voters" id="voters"></p>
+      </section>`;
+    }
+    async function loadVoters() {
+      if (!canVote) return;
+      try {
+        const { voters } = await (await fetch("/api/voters")).json();
+        const el = document.getElementById("voters");
+        if (el) el.textContent = voters.length ? `Voted so far: ${voters.join(", ")}` : "No votes yet.";
+      } catch {}
+    }
+    async function postJSON(url, body) {
+      const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      return { ok: res.ok, data: await res.json().catch(() => ({})) };
+    }
+
+    document.addEventListener("submit", async (e) => {
+      const form = e.target.closest("form[data-vote]");
+      if (!form) return;
+      e.preventDefault();
+      const msg = form.querySelector(".vote-msg");
+      const name = form.elements.name.value.trim();
+      const picks = [...form.querySelectorAll('select[name="pick"]')].map((s) => s.value);
+      if (new Set(picks).size !== 3) return void (msg.textContent = "Pick three different characters.");
+      msg.textContent = "Sending…";
+      try {
+        const { ok, data } = await postJSON("/api/vote", { name, picks });
+        msg.textContent = ok ? (data.replaced ? `Updated your ballot, ${name}.` : `Thanks, ${name}! Your vote is in.`) : data.error || "Something went wrong.";
+        if (ok) loadVoters();
+      } catch {
+        msg.textContent = "Couldn't reach the server.";
+      }
+    });
+
+    // DM-only results page, unlocked with the master password (reuses one entered this tab).
+    const nameOf = (id) => lore(CHARACTERS.find((c) => c.id === id) || { id }).name;
+    function renderVotes() {
+      document.title = `Vote Results · ${PREMISE.title}`;
+      app.innerHTML = `
+        <nav class="topnav"><a href="#/">← Roster</a></nav>
+        <article class="notes">
+          <h2>Vote Results</h2>
+          <form class="unlock" data-results>
+            <input type="password" placeholder="DM password" autocomplete="off" aria-label="DM password">
+            <button>Show results</button><p class="unlock-msg"></p>
+          </form>
+          <div id="results"></div>
+        </article>`;
+      const saved = savedPasswords().master;
+      if (saved) showResults(saved);
+    }
+    async function showResults(password) {
+      const form = document.querySelector("form[data-results]"), msg = form?.querySelector(".unlock-msg");
+      if (!canVote) return void (msg.textContent = "Results are only available on the hosted site.");
+      const { ok, data } = await postJSON("/api/results", { password }).catch(() => ({ ok: false, data: { error: "Couldn't reach the server." } }));
+      if (!ok) return void (msg.textContent = data.error || "Something went wrong.");
+      rememberPassword(null, "master", password);
+      form.remove();
+      const voted = data.tally.filter((t) => t.points > 0);
+      document.getElementById("results").innerHTML = `
+        <p class="note">${data.ballots.length} ballot${data.ballots.length === 1 ? "" : "s"}. Scoring: 1st = 3 points, 2nd = 2, 3rd = 1.</p>
+        <table class="attacks results">
+          <tr><th>Character</th><th>Points</th><th>1st</th><th>2nd</th><th>3rd</th></tr>
+          ${(voted.length ? voted : data.tally).map((t) => `<tr><td>${esc(nameOf(t.id))}</td><td>${t.points}</td><td>${t.first}</td><td>${t.second}</td><td>${t.third}</td></tr>`).join("")}
+        </table>
+        <h3 class="ballots-head">Ballots</h3>
+        <table class="attacks results">
+          <tr><th>Name</th><th>1st</th><th>2nd</th><th>3rd</th><th>When</th></tr>
+          ${data.ballots.map((b) => `<tr><td>${esc(b.name)}</td>${b.picks.map((p) => `<td>${esc(nameOf(p))}</td>`).join("")}<td>${esc(b.submitted)}</td></tr>`).join("") || `<tr><td colspan="5">No votes yet.</td></tr>`}
+        </table>`;
+    }
+    document.addEventListener("submit", (e) => {
+      const form = e.target.closest("form[data-results]");
+      if (!form) return;
+      e.preventDefault();
+      form.querySelector(".unlock-msg").textContent = "Checking…";
+      showResults(form.querySelector("input").value);
+    });
 
     // ---------- encrypted secrets ----------
     // lore.js holds secrets as { iter, iv, ct, slots: [{ who, salt, iv, key }] } (see build.py).
@@ -322,6 +417,7 @@
       const c = CHARACTERS.find((x) => x.id === id);
       if (c) renderCharacter(c);
       else if (id === "dm-notes" && LORE.dmNotes) renderNotes();
+      else if (id === "votes") renderVotes();
       else renderHome();
       window.scrollTo(0, 0);
     }
