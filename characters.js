@@ -35,6 +35,7 @@ const CHARACTERS = [
       { name: "Brimstone Affinity", text: "Resistant to fire. Spend 2 sorcery points to cast a fire spell one level higher." },
       { name: "Cthonic Legacy", text: "Resistant to necrotic damage. Darkvision 60 ft." },
       { name: "Fiendish Origin", text: "Speaks Abyssal; advantage on Charisma checks with fiends who speak it." },
+      { name: "Feed the Hunger", text: "Bonus action: take 2d6 + 2 psychic damage that can't be reduced in any way, and regain 2 sorcery points." },
       { name: "Magic items", text: "Cloak of Protection (+1 AC and saves) and Wand of the War Mage +1 (+1 spell attacks), both already counted." },
     ],
     resources: [

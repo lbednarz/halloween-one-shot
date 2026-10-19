@@ -13,6 +13,12 @@ Arcane by nature, the Sorceress shapes magic in ways that push the boundaries of
 
 ## Secret
 
-The Sorceress suspects that the emissary her parents bargained with served the Green Mother. Her parents have never told her what they promised in return.
+The Sorceress has always suspected that the emissary her parents bargained with served the Green Mother. They never told her what they promised in return, and she never found the courage to ask. Since coming to Wickermoor, she has begun to fear she will find out anyway, because here she has witnessed three omens.
 
-Her gifts reach their peak in destruction. When she unleashes it, she feels a hunger stir within her, and it strains her to call on the arcane's gentler or more whimsical sides.
+The first was waiting for her the day she arrived: a letter from her mother. *Come home before the harvest moon. Please. Don't ask me why.* She stayed.
+
+The second came a week ago, at the edge of the Wytchwood. In a clearing steeped in moonlight, one of the forest's twisted beasts stood waiting. She readied a spell, but it did not charge. It lowered itself to the ground before her, head bowed as if in praise, and stayed that way until she backed out of the clearing.
+
+The third she carries on her own skin. Low on her back, where only her parents have ever seen it, is a birthmark: a circle beneath a horned half-moon. She had never seen that symbol anywhere else until Wickermoor, where it is stamped into the flask the Summoner wears around her neck. And the half-moon has been filling in, a little more each night, as the moon above the village swells.
+
+She has told no one. But she feels all three in the hunger. Her gifts reach their peak in destruction, and when she unleashes it, something within her stirs and feeds, while the arcane's gentler, more whimsical sides grow harder to reach each day. Lately the hunger feels less like her own and more like something coming due.

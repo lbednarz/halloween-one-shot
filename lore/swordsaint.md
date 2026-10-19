@@ -9,11 +9,11 @@ Strong against duelists, can't be flanked (spectral saints), out of her depth ag
 Homebrew idea: Lineage Guard, attackers never gain advantage from flanking her.
 -->
 
-A wandering swordswoman, the Swordsaint never truly travels alone. Her white cloak is half fabric and half binding totem, and in it ride the spirits of nearly every swordsaint before her. They guide her hand, and in a pinch, pale hands reach from the cloak to take up swords beside her. She carries one blade for each of them at her hip, and she speaks to them often, sometimes aloud. Except master Ilese, who demands that she challenge everyone she meets to a duel.
+A wandering swordswoman, the Swordsaint never truly travels alone. Her white cloak is half fabric and half binding totem, and in it ride the spirits of every swordsaint before her. They guide her hand, and in a pinch, pale hands reach from the cloak to take up swords beside her. She carries one blade for each of them at her hip, and sometimes consults with them. Except master Ilese, who demands that she challenge everyone she meets to a duel.
 
 If she dies before training a worthy student, the lineage will be trapped within those swords, perhaps scattered for centuries. This must not happen, at *any* cost.
 
-She has come to Wickermoor because the spirits told her to. They say the weapon of ancient, lost swordsaint lies embedded in one of the eldest monsters of the Wytchwood. The spirits plead with the swordsaint to recover the sword. They beg, even.
+She has come to Wickermoor because the spirits told her to. They say the weapon of a lost swordsaint lies embedded in one of the eldest monsters of the Wytchwood. The spirits plead with the swordsaint to recover the sword. They beg, even. She hadn't heard mention of any other swordsaints by the spritis before, though.
 
 While here, the Knight-errant has caught her eye: humble, kind, determined. Her technique is another matter; she might as well be throwing her sword at her foes. The Swordsaint has never said so, for fear the Knight-errant would try it. Still, she is open-minded. Anyone she meets might yet prove a worthy pupil.
 

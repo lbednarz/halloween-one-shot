@@ -3,7 +3,7 @@ name: The Flagellant
 epithet: Fighter (Battle Master)
 ---
 
-Once squire to a great knight, the Flagellant watched as her mentor used his power to extort and belittle the weak, feeding his greed and lust at their expense. Under mysterious circumstances, the knight is gone now. She wears his armor: a half-plate set, ill-fitting and massive when she first put it on, which she has since draped in cloak-like coverings, both to hide its worth from ambitious highwaymen and to seem less fearsome to the people she serves. Around her head is wound tightly with a sort of living plant. She does not take it off. She does not talk about it.
+Once squire to a great knight, the Flagellant watched as her mentor used his power to extort and belittle the weak, feeding his greed and lust at their expense. Under mysterious circumstances, the knight is gone now. She wears his armor: a half-plate set, ill-fitting and massive when she first put it on, which she has since draped in cloak-like coverings, both to hide its worth from ambitious highwaymen and to seem less fearsome to the people she serves. Wound tightly around her head is a sort of living plant that occasionally writhes and cuts into the knight. She does not take it off. She does not talk about it.
 
 She has spent many months in Wickermoor, quietly undoing what she can of her mentor's wicked deeds: returning what he took, mending what he broke, apologizing for a man who never would. She is warm and friendly and assumes the best of everyone until they prove otherwise. Many first took her for a pariah, but good word has spread, and she is now well-liked.
 

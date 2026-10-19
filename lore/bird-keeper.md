@@ -5,7 +5,7 @@ epithet: Artificer (Alchemist)
 
 A hermit from the nearby Wytchwood, or so she claims. No one has ever heard of a human venturing into those woods and returning unharmed, much less living there. Yet every few days she comes stooping in through the village gate: long-armed, wrapped in a ragged patchwork cloak, and smelling of woodsmoke and strange herbs.
 
-She says she comes to trade, offering potions and poultices for bread, thread, and news. When in down, she has a way of turning up wherever the governor's men are talking. Ask her what lies in the Wytchwood, and she'll only smile: "Trees, dearie. Ever so many trees."
+She says she comes to trade, offering potions and poultices for bread, thread, and news. When in town, she has a way of turning up wherever the governor's men are talking. Ask her what lies in the Wytchwood, and she'll only smile: "Trees, dearie. Ever so many trees."
 
 The bustle of the (small) village overwhelms her. She is warm to any pariah, animal, or child she meets. She has endless patience for the Wretched, who adores her for it. But she has a distain for folks that set themselves above others. Oddly, the only member of the guard she greets like an old friend is its gruff founder, the Relentless.
 

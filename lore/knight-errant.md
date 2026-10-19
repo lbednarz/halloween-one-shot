@@ -1,6 +1,6 @@
 ---
 name: The Knight-errant
-aka: Faylese Naal
+# aka: Faylese Naal
 epithet: Paladin (Oath of the Ancients)
 ---
 
