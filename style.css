@@ -143,6 +143,9 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; }
 .prose blockquote p { margin: 0; }
 .prose ul, .prose ol { padding-left: 1.3em; }
 .prose hr { border: 0; height: 1px; background: var(--line); margin: 24px 0; }
+.prose table { display: block; overflow-x: auto; border-collapse: collapse; margin: 16px 0; }
+.prose th, .prose td { padding: 6px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.prose th { color: var(--accent); font-weight: 600; }
 
 /* ---------- hidden secret section (## Secret in lore/*.md) ---------- */
 .secret {

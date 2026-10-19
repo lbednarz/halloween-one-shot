@@ -78,7 +78,7 @@ def parse(path):
 
 
 def render(md):
-    return markdown.markdown(md.strip(), extensions=["smarty"])
+    return markdown.markdown(md.strip(), extensions=["smarty", "tables"])
 
 
 def b64(data):
