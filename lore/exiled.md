@@ -1,6 +1,7 @@
 ---
 name: The Exiled
 epithet: Barbarian (Subclass)
+summary: A turncoat who switched sides just in time to lose, and was cast into the woods with nothing. He now wears armor cut from every foe he's beaten since.
 ---
 
 The Exiled once fought in a rebellion to overthrow the rulers of his homeland. Cornered in a skirmish and nearly killed, he surrendered and, in desperation, joined the very force he had fought against. Months later the rebellion won. He had switched sides just in time to lose.

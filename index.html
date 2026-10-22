@@ -41,7 +41,7 @@
             </a>`).join("")}
         </section>
         ${voteSection()}
-        <footer class="dm-link"><a href="#/party">The Party</a> · ${LORE.dmNotes ? `<a href="#/dm-notes">DM Notes</a> · ` : ""}<a href="#/votes">Vote Results</a></footer>`;
+        <footer class="dm-link"><a href="#/party">The Party</a> · <a href="#/relationships">Relationships</a> · ${LORE.dmNotes ? `<a href="#/dm-notes">DM Notes</a> · ` : ""}<a href="#/votes">Vote Results</a></footer>`;
       loadVoters();
     }
 
@@ -196,8 +196,100 @@
         </header>
         <section class="roster">
           ${available.map((id) => partyCard(id)).join("") || `<p class="note">Every character has been claimed.</p>`}
-        </section>`;
+        </section>
+        <footer class="dm-link"><a href="#/relationships">How they're connected →</a></footer>`;
     }
+
+    // ---------- relationships (summaries from lore frontmatter, links found by build.py) ----------
+    // Cards go round the edge of a grid, clockwise from the top left, leaving the middle open;
+    // lines join characters whose lore names each other, bowed toward the middle so they don't
+    // hide behind cards in the same row. Lines are measured from the laid-out cards and redrawn on resize.
+    let showAvailable = false;
+    const REL_COLS = 4;
+    function ringCells(n) {
+      let rows = 2;
+      while (2 * REL_COLS + 2 * (rows - 2) < n) rows++;
+      const cells = [];
+      for (let c = 1; c <= REL_COLS; c++) cells.push([1, c]);
+      for (let r = 2; r < rows; r++) cells.push([r, REL_COLS]);
+      for (let c = REL_COLS; c >= 1; c--) cells.push([rows, c]);
+      for (let r = rows - 1; r > 1; r--) cells.push([r, 1]);
+      return cells;
+    }
+    function renderRelations() {
+      document.title = `Relationships · ${PREMISE.title}`;
+      const party = typeof PARTY === "undefined" ? [] : PARTY;
+      const picked = [...new Set(party.flatMap((p) => [p.primary, p.secondary]).filter((id) => LORE.characters[id]))];
+      const ids = showAvailable ? [...picked, ...castable().filter((id) => !picked.includes(id))] : picked;
+      const owner = {};
+      for (const p of party) for (const [id, role] of [[p.primary, "Primary"], [p.secondary, "Secondary"]]) if (id) (owner[id] ||= []).push(`${p.player} · ${role}`);
+      const cells = ringCells(ids.length);
+      const rels = (LORE.relations || []).filter((r) => ids.includes(r.a) && ids.includes(r.b));
+      const linksOf = (id) => rels.filter((r) => r.a === id || r.b === id).map((r) => ({ id: r.a === id ? r.b : r.a, secret: r.secret }));
+      const card = (id, i) => {
+        const c = CHARACTERS.find((x) => x.id === id);
+        const l = LORE.characters[id];
+        const image = c ? c.image : `character images/the ${id.replace(/-/g, " ")}.jpg`;
+        const links = linksOf(id);
+        const tag = c ? "a" : "div";
+        return `<${tag} class="rel-card${owner[id] ? "" : " unpicked"}" data-rel="${id}" ${c ? `href="#/${id}"` : ""}
+            style="--r:${cells[i][0]};--c:${cells[i][1]}">
+            <img src="${img(image)}" alt="" loading="lazy">
+            <span class="rel-text">
+              <span class="rel-name">${esc(l.name)}</span>
+              <span class="rel-owner">${owner[id] ? esc(owner[id].join(", ")) : "Available"}</span>
+              <span class="rel-summary">${esc(l.summary || "")}</span>
+              ${links.length ? `<span class="rel-links">${links.map((k) => `<span class="${k.secret ? "dashed" : ""}">${esc(LORE.characters[k.id].name)}</span>`).join("")}</span>` : ""}
+            </span>
+          </${tag}>`;
+      };
+      app.innerHTML = `
+        <nav class="topnav"><a href="#/party">← The Party</a></nav>
+        <header class="premise">
+          <p class="tagline">${esc(PREMISE.title)}</p>
+          <h1>Relationships</h1>
+          <div class="rule"><span>✦</span></div>
+        </header>
+        <div class="rel-controls">
+          <p class="rel-legend"><span><i></i> Named in public lore</span><span><i class="dashed"></i> Named only in a secret</span></p>
+          <button data-relavailable>${showAvailable ? "Hide" : "Show"} available characters</button>
+        </div>
+        <section class="rel-figure">
+          <svg aria-hidden="true">${rels.map((r) => `<path data-a="${r.a}" data-b="${r.b}" class="${r.secret ? "dashed" : ""}"/>`).join("")}</svg>
+          ${ids.map(card).join("") || `<p class="note">No one's been cast yet. Fill in party.js.</p>`}
+        </section>`;
+      const fig = app.querySelector(".rel-figure");
+      drawRelations(fig);
+      new ResizeObserver(() => drawRelations(fig)).observe(fig);
+    }
+    function drawRelations(fig) {
+      const svg = fig.querySelector("svg");
+      const w = fig.offsetWidth, h = fig.offsetHeight;
+      svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+      const centre = (id) => {
+        const el = fig.querySelector(`[data-rel="${id}"]`);
+        return [el.offsetLeft + el.offsetWidth / 2, el.offsetTop + el.offsetHeight / 2];
+      };
+      for (const path of svg.querySelectorAll("path")) {
+        const [x1, y1] = centre(path.dataset.a), [x2, y2] = centre(path.dataset.b);
+        const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+        const qx = mx + (w / 2 - mx) * 0.6, qy = my + (h / 2 - my) * 0.6;
+        path.setAttribute("d", `M${x1},${y1} Q${qx},${qy} ${x2},${y2}`);
+      }
+    }
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest("[data-relavailable]")) return;
+      showAvailable = !showAvailable;
+      renderRelations();
+    });
+    // Hovering a card lights up its lines and fades the rest.
+    document.addEventListener("mouseover", (e) => {
+      const fig = e.target.closest(".rel-figure");
+      if (!fig) return;
+      const id = e.target.closest("[data-rel]")?.dataset.rel;
+      fig.classList.toggle("focus", !!id);
+      for (const line of fig.querySelectorAll("path")) line.classList.toggle("lit", line.dataset.a === id || line.dataset.b === id);
+    });
 
     // ---------- encrypted secrets ----------
     // lore.js holds secrets as { iter, iv, ct, slots: [{ who, salt, iv, key }] } (see build.py).
@@ -481,6 +573,7 @@
       else if (id === "dm-notes" && LORE.dmNotes) renderNotes();
       else if (id === "votes") renderVotes();
       else if (id === "party") renderParty();
+      else if (id === "relationships") renderRelations();
       else renderHome();
       window.scrollTo(0, 0);
     }

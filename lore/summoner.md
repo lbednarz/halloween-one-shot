@@ -1,6 +1,7 @@
 ---
 name: The Summoner
 epithet: Warlock (Fiend, Pact of the Chain)
+summary: A warlock who carries a demon in a flask, kept in check by rituals she never breaks. She finds more peace among the Wytchwood's monsters than in the village.
 ---
 
 A wielder of magic in ornate clothing, the Summoner has made a pact. Around her neck hangs a small metal flask, marked with a circle beneath a half-moon that curves above it like a pair of horns. Within the flask lives a physically imposing, tricky demon. The Summoner consults with it, walks the woodland with it, and lets it calm the hearts of the monsters there.

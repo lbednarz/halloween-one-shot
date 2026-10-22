@@ -1,6 +1,7 @@
 ---
 name: The Flagellant
 epithet: Fighter (Battle Master)
+summary: A former squire quietly undoing her cruel master's wrongs, wearing his armor and a living crown of thorns. She'd rather talk a foe down than kill them.
 ---
 
 Once squire to a great knight, the Flagellant watched as her mentor used his power to extort and belittle the weak, feeding his greed and lust at their expense. Under mysterious circumstances, the knight is gone now. She wears his armor: a half-plate set, ill-fitting and massive when she first put it on, which she has since draped in cloak-like coverings, both to hide its worth from ambitious highwaymen and to seem less fearsome to the people she serves. Wound tightly around her head is a sort of living plant that occasionally writhes and cuts into the knight. She does not take it off. She does not talk about it.

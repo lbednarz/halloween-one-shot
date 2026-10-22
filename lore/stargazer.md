@@ -1,6 +1,7 @@
 ---
 name: The Stargazer
 epithet: Cleric (Light Domain)
+summary: A Gnarlborn pilgrim revered as a child of the Green Mother, stopped at Wickermoor by something he won't name. He hasn't bloomed this year, and he won't look at the moon.
 ---
 
 A Gnarlborn, one of the tree-folk, the Stargazer has made pilgrimage to the Wytchwood from lands afar many times before. This time, upon reaching Wickermoor Hollow, something stopped him, suddenly and wordlessly, and he has not gone further. In legend, his kind were born of the Green Mother herself, and the townsfolk revere him for it. They welcomed him with open arms.

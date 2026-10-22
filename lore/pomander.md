@@ -1,6 +1,7 @@
 ---
 name: The Pomander
 epithet: Fighter (Eldritch Knight)
+summary: A self-proclaimed disgraced noble, alchemist, and monster hunter compiling a bestiary of the Wytchwood. He keeps slipping off to the governor's manor with a full satchel.
 ---
 
 A dragon-like warrior from afar, the Pomander claims to be a nobleman disgraced from his house. To some in the guard, he is an inside joke: "the play-pretend prince." To those who humor him, he is a talented alchemist, a savvy beast hunter, a scholar, and an unreliable fount of "once upon a time" stories from his spectacular life. He is quick to turn his nose up at commoners who fail to, say, compliment his fine garb or note his air of nobility, and just as quick to be enchanted by anyone who recognizes a noble gentleman when they meet one.

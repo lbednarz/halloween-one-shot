@@ -1,6 +1,7 @@
 ---
 name: The Swordsaint
 epithet: Fighter (Echo Knight)
+summary: A wandering duelist carrying the spirits of her lineage in her cloak, sent to recover a lost swordsaint's blade. She's eyeing the Knight-errant as a possible heir.
 ---
 
 <!--

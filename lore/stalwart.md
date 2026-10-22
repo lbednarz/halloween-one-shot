@@ -1,6 +1,7 @@
 ---
 name: The Stalwart
 epithet: Paladin (Oath of the Watchers)
+summary: An acorn from a family of mighty treant guards who never grew. Gruff, brave, and prone to inventing quests the village then has to rescue him from.
 ---
 
 The Stalwart was born to be a guard, at least in his own mind. His father was a guard, his grandfather was a guard, and now it is his turn. One problem: the Stalwart never grew past an acorn. His relatives grew into mighty, treant-like beings, while he remains small of body, if brave of heart.

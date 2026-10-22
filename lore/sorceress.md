@@ -1,6 +1,7 @@
 ---
 name: The Sorceress
 epithet: Sorcerer (Aberrant Mind)
+summary: A Tiefling born of a strange bargain, with destructive magic in her blood. She has come to learn what really lies behind the Green Mother.
 ---
 
 An ambitious bender of the arcane, the Sorceress has come to Wickermoor Hollow to uncover the nature of the magic that saturates its soil, and of the curious patron the villagers worship there. They speak of the "Green Mother," a distant, Mother Nature-like deity. The Sorceress doubts that any single entity could be behind such an anomaly. She suspects the source is something far older, and far less kind.

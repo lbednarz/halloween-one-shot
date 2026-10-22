@@ -1,6 +1,7 @@
 ---
 name: The Bird Keeper
 epithet: Artificer (Alchemist)
+summary: A Wytchwood hermit who trades potions for news, trailed by sparrows that seem to tell her everything. Gentle with outcasts, and oddly old friends with the Relentless.
 ---
 
 A hermit from the nearby Wytchwood, or so she claims. No one has ever heard of a human venturing into those woods and returning unharmed, much less living there. Yet every few days she comes stooping in through the village gate: long-armed, wrapped in a ragged patchwork cloak, and smelling of woodsmoke and strange herbs.

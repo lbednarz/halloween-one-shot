@@ -1,6 +1,7 @@
 ---
 name: The Guttersnipe
 epithet: Wizard (School of Divination)
+summary: A Tabaxi street thief turned gifted wizard, never forgiven for where they came from. They sense something vast pressing in on Wickermoor, and part of them wants to see it.
 ---
 
 A meek creature, the Guttersnipe is a wondrous wizard, if an ill-regarded one. Caught thieving and bound for the workhouse, they were taken under the wing of a wizard who saw a brighter future in them. The Guttersnipe proved a fast learner and a do-gooder at heart. Where once they had fought tooth and nail for their next meal, they now spent their nights lost as often in great works of fiction as in their studies.

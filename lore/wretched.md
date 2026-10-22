@@ -1,6 +1,7 @@
 ---
 name: The Wretched
 epithet: Rogue (Subclass)
+summary: A riddling, oddly unkillable creature the guard uses as live bait. He dreams of a home, and treasures the Bird Keeper's patience.
 ---
 
 A creature that is... certainly in the village. He fancies himself a guard, a protector. He has been barred from gate duty ever since he began demanding that travelers "answer thee my riddles three." Each time someone answered, he would reply, "I don't know, maybe!"

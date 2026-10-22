@@ -1,6 +1,7 @@
 ---
 name: The Wall
 epithet: Class (Subclass)
+summary: A four-armed silkborn who believes he secretly leads the guard, and confides it to someone new every week. For once, he's keeping one story to himself.
 ---
 
 A silkborn of considerable size, the Wall sauntered into Wickermoor Village, asked where its strongest fighters stayed, found them at the barracks, and announced that he'd do it: he'd be their leader. After a short conversation with the Relentless, it became clear they were not in search of leadership. But being a modest man and a deep thinker, the Wall understood what the Relentless was *really* saying: the Wall is the leader now, but it must stay secret, so as not to embarrass the Relentless in front of his warriors.

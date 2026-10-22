@@ -389,3 +389,51 @@ dt button.spell { font-weight: 600; }
 .available-head h2 { font-size: clamp(28px, 4vw, 40px); letter-spacing: .04em; }
 .available-head .note { margin: 6px 0 0; }
 .roster > .party-card { opacity: 1; }
+
+/* ---------- relationships ---------- */
+.rel-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.rel-legend { margin: 0; color: var(--muted); font-size: 15px; display: flex; flex-wrap: wrap; gap: 4px 22px; }
+.rel-legend span { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.rel-legend i { display: inline-block; width: 36px; border-top: 2px solid var(--accent); }
+.rel-legend i.dashed { border-top-style: dashed; }
+.rel-controls button {
+  font: 13px var(--display); letter-spacing: .12em; text-transform: uppercase; color: var(--ink);
+  background: none; border: 1px solid var(--accent); border-radius: 999px; padding: 6px 16px; cursor: pointer;
+}
+.rel-controls button:hover { background: var(--accent); color: #1a1614; }
+
+.rel-figure { position: relative; display: grid; grid-template-columns: repeat(4, 1fr); gap: 44px 22px; }
+.rel-figure svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.rel-figure path { fill: none; stroke: var(--accent); stroke-width: 2; opacity: .75; transition: opacity .15s; }
+.rel-figure path.dashed { stroke-dasharray: 7 6; }
+.rel-figure.focus path { opacity: .1; }
+.rel-figure.focus path.lit { opacity: 1; stroke-width: 3; }
+
+.rel-card {
+  position: relative; grid-row: var(--r); grid-column: var(--c);
+  display: flex; gap: 12px; align-items: flex-start; text-decoration: none;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px;
+  transition: border-color .15s;
+}
+.rel-card:hover { border-color: var(--accent); }
+.rel-card img {
+  flex: none; width: 60px; height: 60px; border-radius: 50%; object-fit: cover; object-position: top;
+  border: 1px solid var(--accent); background: #e9e4dc;
+}
+.rel-text { display: flex; flex-direction: column; min-width: 0; }
+.rel-name { font-family: var(--display); font-size: 15px; line-height: 1.25; }
+.rel-owner { font-family: var(--display); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 3px 0 6px; line-height: 1.4; }
+.rel-summary { font-size: 14px; line-height: 1.35; color: var(--muted); }
+.rel-card.unpicked { border-style: dashed; }
+.rel-card.unpicked .rel-owner { color: var(--muted); }
+.rel-links { display: none; }
+
+/* Too narrow for the ring: stack the cards and list each one's connections instead. */
+@media (max-width: 820px) {
+  .rel-figure { grid-template-columns: 1fr; gap: 14px; }
+  .rel-figure svg { display: none; }
+  .rel-card { grid-row: auto; grid-column: auto; }
+  .rel-links { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .rel-links span { border: 1px solid var(--accent); border-radius: 999px; padding: 1px 10px; font-size: 13px; color: var(--ink); }
+  .rel-links span.dashed { border-style: dashed; }
+}

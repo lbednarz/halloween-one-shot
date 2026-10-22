@@ -2,6 +2,7 @@
 name: The Knight-errant
 # aka: Faylese Naal
 epithet: Paladin (Oath of the Ancients)
+summary: An earnest elf paladin hailed as the village hero for slaying a beast, and gifted ghostly wings for it. She can't take praise and won't talk about the beast.
 ---
 
 A foolhardy warrior of the light, the Knight-errant came to Wickermoor Hollow to cleave the darkness from it one good deed at a time. That was the plan, anyway. For most of her time in Wickermoor Village, her "quests" have been couriering parcels from one end of town to the other and fixing creaking doors and wobbly tables for the elderly.

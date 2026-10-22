@@ -1,6 +1,7 @@
 ---
 name: The Squire
 epithet: Fighter (Banneret)
+summary: A cheerful self-declared squire still looking for a knight, and hoping it'll be the Flagellant. She runs chores for the whole village and never takes off her helmet.
 ---
 
 A happy-go-lucky, ambitious presence in the village, the Squire is a bright spot in a dark corner of the world. She has declared herself a squire, though she has yet to find a knight to serve. She was dead certain the Flagellant would take her under her wing. That hasn't happened... yet!

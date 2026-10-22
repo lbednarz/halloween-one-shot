@@ -1,6 +1,7 @@
 ---
 name: The Relentless
 epithet: Ranger (Gloom Stalker)
+summary: The gruff hunter who founded the village guard and leads its hunts into the Wytchwood. He resents the governor's expansion, and is grudgingly best friends with the Exiled.
 ---
 
 An honorary local, the Relentless has lived in Wickermoor Hollow for over a decade. Or rather, in the Wytchwood just outside it.
