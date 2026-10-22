@@ -132,7 +132,6 @@ const CHARACTERS = [
       { name: "Opportunity Attack", text: "Strike a creature that leaves her reach." },
     ],
     feats: [
-      { name: "Alert", text: "+3 to initiative (included). After rolling initiative, she can swap with a willing ally." },
       { name: "Savage Attacker", text: "Once per turn, roll a weapon's damage dice twice and use either result." },
       { name: "Royal Envoy", text: "Double proficiency on Persuasion (included)." },
       { name: "Resourceful", text: "Gains Heroic Inspiration after every long rest: reroll one die, once." },
@@ -297,7 +296,56 @@ const CHARACTERS = [
       },
     },
   },
-  stub("swordsaint", "the swordsaint.jpg"),
+  {
+    id: "swordsaint",
+    image: "character images/the swordsaint.jpg",
+    // From character sheets/the swordsaint.pdf (D&D Beyond export). The sheet says Champion only to
+    // get an export: Improved Critical and Remarkable Athlete are left out.
+    // Alert swapped for Sentinel (initiative 8 -> 5). Her homebrew Swordsaint
+    // subclass lives in homebrew/swordsaint.md. Attacks use DEX (homebrew Saint's Grace); the sheet has them on STR.
+    stats: { level: 7, hp: 74, ac: 17, speed: "30 ft", initiative: 5, passivePerception: 11 },
+    abilities: {
+      str: { score: 12, save: 4 }, dex: { score: 20, save: 5 }, con: { score: 18, save: 7 },
+      int: { score: 12, save: 1 }, wis: { score: 13, save: 1 }, cha: { score: 11, save: 0 },
+    },
+    saves: ["str", "con"],
+    skills: ["Acrobatics +8", "Athletics +4", "History +4", "Intimidation +3", "Persuasion +3"],
+    attacks: [
+      { name: "Flame Tongue Longsword", hit: 8, damage: "1d8+5 slashing", notes: "+2d6 fire while ignited. Two-handed: 1d10+5, reroll 1s and 2s on damage. Sap: a target she hits has disadvantage on its next attack." },
+      { name: "Longsword +1 (×4)", hit: 9, damage: "1d8+6 slashing", notes: "One for each saint in her cloak. Two-handed: 1d10+6, reroll 1s and 2s on damage. Sap." },
+    ],
+    actions: [
+      { name: "Extra Attack", text: "Attack twice when she takes the Attack action." },
+      { name: "Action Surge (1 / short rest)", text: "Take one additional action on her turn." },
+      { name: "Disarming Attack (superiority die)", text: "On a hit, add the d6 to damage; the target drops one item it's holding unless it makes a STR save (DC 16)." },
+    ],
+    bonusActions: [
+      { name: "Second Wind (1 / short rest)", text: "Regain 1d10 + 7 HP." },
+      { name: "Ignite Flame Tongue", text: "Set the blade alight (or put it out). While lit it sheds bright light 40 ft and deals +2d6 fire." },
+      { name: "Cloak of Billowing", text: "Her cloak billows dramatically. Purely for show." },
+    ],
+    reactions: [
+      { name: "Riposte (superiority die)", text: "When a creature misses her with a melee attack, make a melee weapon attack against it; on a hit, add the d6 to damage." },
+      { name: "Sentinel", text: "Right after a creature within 5 ft takes the Disengage action or hits someone other than her, she can make an opportunity attack against it. A creature she hits with an opportunity attack has speed 0 for the rest of the turn." },
+      { name: "Opportunity Attack", text: "Strike a creature that leaves her reach." },
+    ],
+    feats: [
+      { name: "Great Weapon Fighting", text: "Wielding a melee weapon two-handed, reroll 1s and 2s on its damage dice." },
+      { name: "Martial Adept", text: "Knows the Disarming Attack and Riposte maneuvers, fueled by one d6 superiority die per short rest." },
+      { name: "Savage Attacker", text: "Once per turn, roll a weapon's damage dice twice and use either result." },
+      { name: "Resourceful", text: "Gains Heroic Inspiration after every long rest: reroll one die, once." },
+      { name: "Ring of Mind Shielding", text: "Magic can't read her thoughts, tell whether she's lying, or learn her alignment or creature type. Telepathy reaches her only if she allows it." },
+    ],
+    resources: [
+      { name: "Action Surge", max: 1, recharge: "short" },
+      { name: "Second Wind", max: 1, recharge: "short" },
+      { name: "Superiority Die", max: 1, recharge: "short" },
+    ],
+    items: [
+      { name: "Potion of Healing (Greater)", qty: 3, text: "Drink to regain 4d4 + 4 HP." },
+    ],
+    spellcasting: null,
+  },
   {
     id: "relentless",
     image: "character images/the relentless.jpg",

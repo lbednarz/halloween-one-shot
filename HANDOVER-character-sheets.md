@@ -7,8 +7,8 @@ and what's left to do. (The story itself lives in `lore/`; see the end of this f
 
 | | Characters |
 |---|---|
-| **Stats done** (7) | Sorceress, Exiled, Squire, Bird Keeper, Stargazer, Relentless, Knight-errant |
-| **Waiting on a sheet** (8) | Swordsaint, Flagellant, Wretched, Summoner, Guttersnipe, Stalwart, Pomander, Wall |
+| **Stats done** (8) | Sorceress, Exiled, Squire, Bird Keeper, Stargazer, Relentless, Knight-errant, Swordsaint |
+| **Waiting on a sheet** (7) | Flagellant, Wretched, Summoner, Guttersnipe, Stalwart, Pomander, Wall |
 
 Every character is level 7. The **Wretched** still carries leftover example stats (an
 old Eldritch Knight placeholder); they get replaced when his sheet arrives. The **Wall's**
@@ -24,6 +24,7 @@ class is still undecided.
 | `character sheets/*.pdf` | The D&D Beyond exports the stats came from. Never served. | n/a |
 | `character images/*.jpg` | Portraits. | No |
 | `index.html` / `style.css` | The page itself and its rendering logic. | No |
+| `homebrew/<id>.md` | Custom (sub)class features: level, sheet section, uses. Public. | Yes: `python3 build.py` |
 | `lore.js` | **Generated**; secrets inside are encrypted. Never edit it. | n/a |
 
 ## Adding a character from a PDF
@@ -79,6 +80,27 @@ and the useful parts (choosing spells, one-line summaries) need judgment.
   ```bash
   node -e 'const fs=require("fs");eval(fs.readFileSync("spells.js","utf8")+fs.readFileSync("characters.js","utf8")+";globalThis.S=SPELLS;globalThis.C=CHARACTERS");for(const c of C)for(const l of Object.values(c.spellcasting?.byLevel||{}))for(const s of l){const n=s.name||s;if(s.note!=="3rd-party"&&!S[n])console.log(c.id,n)}'
   ```
+
+## Homebrew features (`homebrew/<id>.md`)
+
+For custom subclasses and other features D&D Beyond can't express. Copy `homebrew/_template.md`.
+Each `## Feature` heading is one feature, and its first lines are tags:
+
+```
+## Lineage Guard
+level: 3                  required; it goes on the sheet once stats.level reaches this
+section: reaction         attack | action | bonus action | reaction | trait (default: trait)
+hit: 7                    attacks only, with damage: (the description becomes the Notes)
+uses: 2 / short rest      optional; adds pips named after the feature
+replaces: Manifest Echo   optional; hides imported features, attacks, resources or items with
+                          these names. "Spellcasting" drops the whole spell list
+
+Description in markdown.
+```
+
+Features above the character's level stay off the sheet. A bad tag stops the build
+with the file and feature named. `replaces` works on single spells only by removing
+the whole list (`Spellcasting`).
 
 ## Character-specific mechanics
 

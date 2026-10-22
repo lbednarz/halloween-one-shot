@@ -18,6 +18,9 @@ Files starting with "_" (like lore/_template.md) are skipped.
 Anything below a `## Secret` heading is hidden on the page behind a reveal toggle.
 A `summary:` line (a sentence or two, public lore only) is shown on the relationships page.
 
+homebrew/<id>.md holds custom (sub)class features for that character; see
+homebrew/_template.md for the format. They're public, never encrypted.
+
 Two characters are related when either one's lore names the other ("the Squire"). The
 relationships page draws a solid line if the mention is in public lore, dashed if it's only
 in a secret. Which characters are linked is public; what the secret says stays encrypted.
@@ -63,6 +66,7 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 ROOT = Path(__file__).parent
 LORE = ROOT / "lore"
+HOMEBREW = ROOT / "homebrew"
 OUT = ROOT / "lore.js"
 SECRET = re.compile(r"^##\s*Secret\s*$", re.M | re.I)
 PASSWORDS = ROOT / "passwords.json"
@@ -75,8 +79,8 @@ lichen tallow omen vesper briar marrow pyre cinder gloam yew sexton acorn
 sparrow wolf moon sap root barrow tomb lamp vigil hush shroud""".split()
 
 
-def parse(path):
-    text = path.read_text(encoding="utf-8")
+def frontmatter(text):
+    """Split `key: value` lines between leading `---` fences from the rest of the file."""
     meta = {}
     if text.startswith("---"):
         _, front, text = text.split("---", 2)
@@ -84,6 +88,11 @@ def parse(path):
             if ":" in line:
                 key, value = line.split(":", 1)
                 meta[key.strip()] = value.strip()
+    return meta, text
+
+
+def parse(path):
+    meta, text = frontmatter(path.read_text(encoding="utf-8"))
     body, secret = (SECRET.split(text, maxsplit=1) + [""])[:2]
     meta["html"] = render(body)
     if secret.strip():
@@ -93,6 +102,55 @@ def parse(path):
 
 def render(md):
     return markdown.markdown(md.strip(), extensions=["smarty", "tables"])
+
+
+# Where a homebrew feature shows up on the sheet: `section:` value -> characters.js list.
+SECTIONS = {"attack": "attacks", "action": "actions", "bonus action": "bonusActions", "reaction": "reactions", "trait": "feats"}
+FEATURE = re.compile(r"^##\s+(.+?)\s*$", re.M)
+TAG = re.compile(r"^(level|section|uses|replaces|hit|damage)\s*:\s*(.+?)\s*$", re.I)
+USES = re.compile(r"^(\d+)\s*/\s*(short|long)(?: rest)?$", re.I)
+
+
+def parse_homebrew(path):
+    """A homebrew file: frontmatter (name, class), an optional intro, then one `## Feature`
+    per feature. Each feature starts with tag lines, then its description in markdown:
+        level: 3                       character level it's gained at (required)
+        section: bonus action          attack | action | bonus action | reaction | trait (default trait)
+        hit: 7    damage: 1d6+4 fire   attacks only (each on its own line); hit can be text, e.g. DC 15
+        uses: 2 / short rest           adds a resource tracker named after the feature
+        replaces: Manifest Echo        hides an imported feature, attack, resource or item with this
+                                       name (comma-separate several); "Spellcasting" drops the spell list"""
+    meta, text = frontmatter(path.read_text(encoding="utf-8"))
+    text = re.sub(r"<!--.*?-->", "", text, flags=re.S)
+    intro, *parts = FEATURE.split(text)
+    features = []
+    for name, body in zip(parts[::2], parts[1::2]):
+        where = f"{path.name}, '{name}'"
+        lines = body.strip().splitlines()
+        tags = {}
+        while lines and (m := TAG.match(lines[0])):
+            tags[m[1].lower()] = m[2]
+            lines.pop(0)
+        if not tags.get("level", "").isdigit():
+            raise ValueError(f"{where}: needs a `level: N` line")
+        section = tags.get("section", "trait").lower()
+        if section not in SECTIONS:
+            raise ValueError(f"{where}: section must be one of {', '.join(SECTIONS)}")
+        feature = {"name": name, "level": int(tags["level"]), "section": SECTIONS[section], "html": render("\n".join(lines))}
+        if section == "attack":
+            if not ("hit" in tags and "damage" in tags):
+                raise ValueError(f"{where}: attacks need `hit:` and `damage:` lines")
+            feature["hit"] = int(tags["hit"]) if re.fullmatch(r"[+-]?\d+", tags["hit"]) else tags["hit"]
+            feature["damage"] = tags["damage"]
+        if "uses" in tags:
+            if not (m := USES.match(tags["uses"])):
+                raise ValueError(f"{where}: uses should look like `2 / short rest` or `1 / long rest`")
+            feature["uses"] = {"max": int(m[1]), "recharge": m[2].lower()}
+        if "replaces" in tags:
+            feature["replaces"] = [r.strip() for r in tags["replaces"].split(",") if r.strip()]
+        features.append(feature)
+    features.sort(key=lambda f: f["level"])
+    return {"name": meta.get("name", ""), "class": meta.get("class", ""), "html": render(intro), "features": features}
 
 
 def b64(data):
@@ -171,17 +229,21 @@ def build():
     if notes:
         notes["html"] = encrypt(notes["html"], [("master", pw["master"])])
 
-    data = {"premise": premise, "dmNotes": notes, "characters": characters, "relations": rels}
+    homebrew = {p.stem: parse_homebrew(p) for p in sorted(HOMEBREW.glob("*.md")) if not p.stem.startswith("_")}
+    for cid in homebrew.keys() - characters.keys():
+        print(f"warning: homebrew/{cid}.md has no matching lore/{cid}.md")
+
+    data = {"premise": premise, "dmNotes": notes, "characters": characters, "relations": rels, "homebrew": homebrew}
     OUT.write_text(
         "// GENERATED by build.py from lore/*.md. Do not edit by hand.\n"
         f"const LORE = {json.dumps(data, indent=2, ensure_ascii=False)};\n",
         encoding="utf-8",
     )
-    print(f"{time.strftime('%H:%M:%S')}  built lore.js ({len(characters)} characters)")
+    print(f"{time.strftime('%H:%M:%S')}  built lore.js ({len(characters)} characters, {len(homebrew)} homebrew)")
 
 
 def snapshot():
-    files = [*LORE.glob("*.md"), *([PASSWORDS] if PASSWORDS.exists() else [])]
+    files = [*LORE.glob("*.md"), *HOMEBREW.glob("*.md"), *([PASSWORDS] if PASSWORDS.exists() else [])]
     return {p: p.stat().st_mtime for p in files}
 
 
@@ -437,7 +499,7 @@ def serve(port, local):
 
 
 def watch():
-    print("watching lore/ (Ctrl+C to stop)")
+    print("watching lore/ and homebrew/ (Ctrl+C to stop)")
     seen = snapshot()
     while True:
         time.sleep(0.5)
@@ -452,7 +514,7 @@ def watch():
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description="Compile lore/*.md into lore.js and optionally host the site.")
-    ap.add_argument("--watch", action="store_true", help="rebuild whenever a lore file changes")
+    ap.add_argument("--watch", action="store_true", help="rebuild whenever a lore or homebrew file changes")
     ap.add_argument("--serve", action="store_true", help="host the site on your LAN")
     ap.add_argument("--port", type=int, default=8000, help="port for --serve (default 8000)")
     ap.add_argument("--local", action="store_true", help="with --serve, only accept connections from this computer")

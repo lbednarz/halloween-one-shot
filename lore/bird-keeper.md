@@ -1,6 +1,6 @@
 ---
 name: The Bird Keeper
-epithet: Artificer (Alchemist)
+epithet: Hedge Grenadier
 summary: A Wytchwood hermit who trades potions for news, trailed by sparrows that seem to tell her everything. Gentle with outcasts, and oddly old friends with the Relentless.
 ---
 

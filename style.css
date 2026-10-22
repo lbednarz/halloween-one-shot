@@ -123,6 +123,11 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; }
 .chips li { border: 1px solid var(--line); border-radius: 999px; padding: 2px 12px; }
 .empty { color: var(--muted); margin: 0; }
 
+/* homebrew features (homebrew/<id>.md) are markdown */
+.hb-text p { margin: 0 0 6px; }
+.hb-text p:last-child, .hb-text ul:last-child { margin-bottom: 0; }
+.hb-text ul { margin: 4px 0 6px; padding-left: 20px; }
+
 @media (max-width: 720px) {
   .hero { grid-template-columns: 1fr; }
   .portrait { max-width: 480px; }

@@ -1,6 +1,6 @@
 ---
 name: The Swordsaint
-epithet: Fighter (Echo Knight)
+epithet: Fighter (Swordsaint)
 summary: A wandering duelist carrying the spirits of her lineage in her cloak, sent to recover a lost swordsaint's blade. She's eyeing the Knight-errant as a possible heir.
 ---
 
@@ -26,6 +26,6 @@ Will she find her heir before the Wytchwood finds her?
 
 The Swordsaint fears that some of her mentors are no longer themselves. Lately, certain voices urge her toward senseless duels and strange challenges. She worries that the swords lost in the Wytchwood are not merely compromised, but dangerous enough to poison the whole lineage.
 
-Not long ago, the spirits told her to cripple a man of the guard, and she did. Only afterward did she piece it together: the monsters struck at his empty post that very night, in an attack that seemed almost coordinated. The Relentless blames his own absences for it. He is wrong.
+Not long ago, the spirits told her to cripple a man of the guard, and she did. Only afterward did she piece it together: the monsters struck at his empty post that very night, in an attack that seemed almost coordinated; ultimately, the Wall was snuck up on and brutally attacked. The Relentless blames his own absences for it. He is wrong.
 
 Do the monsters think? Do they have a leader? And with so many voices traveling with her, who is to say that leader is not speaking through some of them? She has counted the voices in her cloak, again and again. There is one more than there should be.

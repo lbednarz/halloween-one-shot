@@ -24,6 +24,26 @@
     // Lore for a character, with fallbacks if its .md file is missing.
     const lore = (c) => LORE.characters[c.id] || { name: c.id, epithet: "", html: "<p>No lore file yet.</p>" };
 
+    // Fold homebrew/<id>.md features into each sheet: ones at or below the character's level go
+    // into their section (dropping any imported feature they replace), with a resource for `uses`.
+    // Replacing "Spellcasting" drops the whole spell list.
+    for (const c of CHARACTERS) {
+      const hb = LORE.homebrew?.[c.id];
+      if (!hb) continue;
+      const level = Number(c.stats.level) || 0;
+      const active = hb.features.filter((f) => f.level <= level);
+      const gone = new Set(active.flatMap((f) => f.replaces || []).map((n) => n.toLowerCase()));
+      const keep = (x) => !gone.has(x.name.toLowerCase());
+      for (const key of ["attacks", "actions", "bonusActions", "reactions", "feats", "resources", "items"]) c[key] = (c[key] || []).filter(keep);
+      if (gone.has("spellcasting")) c.spellcasting = null;
+      for (const f of active) {
+        c[f.section].push(f.section === "attacks"
+          ? { name: f.name, hit: f.hit, damage: f.damage, html: f.html }
+          : { name: f.name, html: f.html });
+        if (f.uses && !c.resources.some((r) => r.name === f.name)) c.resources.push({ name: f.name, ...f.uses });
+      }
+    }
+
     function renderHome() {
       document.title = PREMISE.title;
       app.innerHTML = `
@@ -402,7 +422,8 @@
       if (!items.length) return `<section class="block"><h3>${title}</h3><p class="empty">—</p></section>`;
       const body = typeof items[0] === "string"
         ? `<ul class="chips">${items.map((s) => `<li>${esc(s)}</li>`).join("")}</ul>`
-        : `<dl>${items.map((i) => `<dt>${spellLink(i.name)}</dt><dd>${esc(i.text)}</dd>`).join("")}</dl>`;
+        : `<dl>${items.map((i) => `<dt>${spellLink(i.name)}</dt>
+            <dd>${i.html ? `<div class="hb-text">${i.html}</div>` : esc(i.text)}</dd>`).join("")}</dl>`;
       return `<section class="block${wide ? " wide" : ""}"><h3>${title}</h3>${body}</section>`;
     }
 
@@ -422,7 +443,8 @@
       if (!attacks.length) return list("Attacks");
       return `<section class="block wide"><h3>Attacks</h3><table class="attacks">
         <tr><th>Weapon</th><th>Hit</th><th>Damage</th><th>Notes</th></tr>
-        ${attacks.map((a) => `<tr><td>${esc(a.name)}</td><td>${sign(a.hit)}</td><td>${esc(a.damage)}</td><td>${esc(a.notes || "")}</td></tr>`).join("")}
+        ${attacks.map((a) => `<tr><td>${esc(a.name)}</td><td>${sign(a.hit)}</td><td>${esc(a.damage)}</td>
+          <td>${a.html ? `<div class="hb-text">${a.html}</div>` : esc(a.notes || "")}</td></tr>`).join("")}
       </table></section>`;
     }
 
