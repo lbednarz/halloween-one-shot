@@ -113,6 +113,8 @@ The prowl clock is **visible to the players**. One clock per haven, and it shrin
 | Haven 2 | Witching Hour | 4 | every 5 min |
 | The tower | | none, they're already inside | |
 
+**Running it:** start the site with `python3 build.py --serve`. Open `clock.html` on the TV and click once to arm its sounds. Run it from `clock-dm.html` on your phone, unlocked with the DM password. That page has a button for each haven above, plus +1 noise, +2 fight, −1 Siv's arrow, and pause. Add `--soundboard http://<laptop>:<port>` once the tabletop soundboard exists, so the tick and breach sounds play through it.
+
 **Ticks** (1 segment unless noted): noise, a light facing the street, opening a door or window, a scream, a failed group stealth check. Starting a fight indoors costs 2.
 
 **A full clock means a breach, not instant death.** The prowlers come through the weakest point. The party gets **one round** to reach an exit they planned, and the haven is lost. Anyone left behind becomes the next door that pleads.

@@ -26,6 +26,14 @@ stored in votes.db (SQLite, never served); one per name, and resubmitting replac
     POST /api/vote     {"name": ..., "picks": [id1, id2, id3]}
     GET  /api/voters   names of everyone who has voted
     POST /api/results  {"password": <DM master>} -> point totals (3/2/1) and every ballot
+
+--serve also hosts the prowl clock: clock.html is the players' display (put it on the TV),
+clock-dm.html is the DM's control page (unlocked with the DM master password).
+    GET  /api/clock    the clock's state
+    POST /api/clock    {"password": <DM master>, "action": "set" | "start" | "pause" | "tick" | "reset" | "status", ...}
+With --soundboard URL, its tick and breach sounds go through the tabletop soundboard
+(POST URL/api/pad {"id": "prowl-tick" | "prowl-breach"}); if that's unset or unreachable,
+the display page plays its own.
 """
 import argparse
 import base64
@@ -40,6 +48,7 @@ import socket
 import sqlite3
 import threading
 import time
+import urllib.request
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
@@ -161,7 +170,8 @@ def lan_ip():
 
 # Only the files the site needs are served. Everything else (lore/*.md with the
 # secrets in plain text, character sheet PDFs, build.py, .git) gets a 404.
-PUBLIC_FILES = {"/", "/index.html", "/style.css", "/lore.js", "/characters.js", "/spells.js"}
+PUBLIC_FILES = {"/", "/index.html", "/style.css", "/lore.js", "/characters.js", "/spells.js", "/party.js",
+                "/clock.html", "/clock-dm.html"}
 PUBLIC_DIRS = ("/character images/",)
 
 
@@ -201,9 +211,13 @@ def voter_names():
         return [r[0] for r in conn.execute("SELECT name FROM votes ORDER BY submitted, name")]
 
 
-def results(body):
+def is_dm(body):
     master = json.loads(PASSWORDS.read_text()).get("master", "") if PASSWORDS.exists() else ""
-    if not master or not hmac.compare_digest(str(body.get("password", "")), master):
+    return bool(master) and hmac.compare_digest(str(body.get("password", "")), master)
+
+
+def results(body):
+    if not is_dm(body):
         return 403, {"error": "That's not the DM password."}
     with db() as conn:
         rows = conn.execute("SELECT name, first, second, third, submitted FROM votes ORDER BY submitted").fetchall()
@@ -216,6 +230,116 @@ def results(body):
     ranked = sorted(tally.values(), key=lambda t: (-t["points"], -t["first"], -t["second"]))
     ballots = [{"name": n, "picks": [a, b, c], "submitted": s} for n, a, b, c, s in rows]
     return 200, {"tally": ranked, "ballots": ballots}
+
+
+# ---------- prowl clock ----------
+class ProwlClock:
+    """The visible prowl clock for the current haven. It fills one segment every `interval`
+    seconds while running, and whenever the DM adds ticks; when full, the prowlers break in.
+    Timed ticks are worked out whenever the state is read, so nothing runs in the background."""
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.soundboard = None       # base URL of the tabletop soundboard, if any
+        self.soundboard_down_until = 0
+        self.sound = {"seq": 0, "pad": None, "local": True}
+        self.configure("The Barracks", 8, 15 * 60)
+
+    def configure(self, name, size, interval):
+        self.name, self.size, self.interval = name, size, interval
+        self.filled, self.running = 0, False
+        self.paused_progress = 0.0   # seconds into the current tick while paused
+        self.tick_started = 0.0      # monotonic time the current tick began, while running
+
+    def advance(self, now):
+        while self.running and self.interval and now - self.tick_started >= self.interval:
+            self.tick_started += self.interval
+            self.add(1)
+
+    def add(self, n):
+        was_full = self.filled >= self.size
+        self.filled = max(0, min(self.size, self.filled + n))
+        if n > 0 and not was_full:
+            if self.filled >= self.size:
+                self.running = False
+                self.paused_progress = 0.0
+                self.emit("prowl-breach")
+            else:
+                self.emit("prowl-tick")
+
+    def emit(self, pad):
+        """Play a sound on the soundboard, or flag it for the display page to play itself."""
+        self.sound = {"seq": self.sound["seq"] + 1, "pad": pad, "local": not self.play_on_soundboard(pad)}
+
+    def play_on_soundboard(self, pad):
+        if not self.soundboard or time.monotonic() < self.soundboard_down_until:
+            return False
+        req = urllib.request.Request(self.soundboard.rstrip("/") + "/api/pad", method="POST",
+                                     data=json.dumps({"id": pad}).encode(),
+                                     headers={"Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=0.5):
+                return True
+        except OSError as e:
+            # Fall back to the display's own sounds, and leave the soundboard alone for a while.
+            self.soundboard_down_until = time.monotonic() + 30
+            print(f"soundboard unreachable ({e}); the clock display will play its own sounds")
+            return False
+
+    def state(self):
+        with self.lock:
+            now = time.monotonic()
+            self.advance(now)
+            progress = now - self.tick_started if self.running else self.paused_progress
+            if not self.soundboard:
+                soundboard = "off"
+            else:
+                soundboard = "down" if now < self.soundboard_down_until else "on"
+            return {
+                "name": self.name, "size": self.size, "filled": self.filled,
+                "interval": self.interval, "running": self.running,
+                "breached": self.filled >= self.size,
+                "nextTickIn": max(0.0, self.interval - progress) if self.interval else None,
+                "sound": dict(self.sound), "soundboard": soundboard,
+            }
+
+    def control(self, body):
+        if not is_dm(body):
+            return 403, {"error": "That's not the DM password."}
+        action = body.get("action")
+        with self.lock:
+            now = time.monotonic()
+            self.advance(now)
+            if action == "set":
+                try:
+                    name = " ".join(str(body.get("name", "")).split())[:40] or "The Prowl"
+                    size = int(body.get("size", 6))
+                    minutes = float(body.get("minutes", 0))
+                except (TypeError, ValueError):
+                    return 400, {"error": "Bad clock settings."}
+                if not (1 <= size <= 12 and 0 <= minutes <= 120):
+                    return 400, {"error": "Use 1-12 segments and 0-120 minutes."}
+                self.configure(name, size, minutes * 60)
+            elif action == "start":
+                if not self.running and self.filled < self.size:
+                    self.running, self.tick_started = True, now - self.paused_progress
+            elif action == "pause":
+                if self.running:
+                    self.running, self.paused_progress = False, now - self.tick_started
+            elif action == "tick":
+                try:
+                    n = int(body.get("n", 1))
+                except (TypeError, ValueError):
+                    return 400, {"error": "Bad tick count."}
+                self.add(max(-12, min(12, n)))
+            elif action == "reset":
+                self.configure(self.name, self.size, self.interval)
+            elif action != "status":  # "status" just checks the password
+                return 400, {"error": "Unknown clock action."}
+        return 200, self.state()
+
+
+clock = ProwlClock()
 
 
 class QuietHandler(SimpleHTTPRequestHandler):
@@ -232,7 +356,7 @@ class QuietHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         path = urlsplit(self.path).path
-        if path not in ("/api/vote", "/api/results"):
+        if path not in ("/api/vote", "/api/results", "/api/clock"):
             return self.send_error(404)
         try:
             length = int(self.headers.get("Content-Length", 0))
@@ -241,7 +365,8 @@ class QuietHandler(SimpleHTTPRequestHandler):
                 raise ValueError
         except ValueError:
             return self.send_json(400, {"error": "Bad request."})
-        self.send_json(*(record_vote(body) if path == "/api/vote" else results(body)))
+        handler = {"/api/vote": record_vote, "/api/results": results, "/api/clock": clock.control}[path]
+        self.send_json(*handler(body))
 
     def is_public(self):
         path = unquote(urlsplit(self.path).path)
@@ -252,6 +377,8 @@ class QuietHandler(SimpleHTTPRequestHandler):
     def do_GET(self):
         if urlsplit(self.path).path == "/api/voters":
             return self.send_json(200, {"voters": voter_names()})
+        if urlsplit(self.path).path == "/api/clock":
+            return self.send_json(200, clock.state())
         if not self.is_public():
             return self.send_error(404)
         super().do_GET()
@@ -277,6 +404,8 @@ def serve(port, local):
         print(f"  on your network: http://{ip}:{port}/")
     elif not local:
         print("  (couldn't detect a LAN address; check your network connection)")
+    base = f"http://{ip or 'localhost'}:{port}"
+    print(f"  prowl clock: {base}/clock.html (players' display), {base}/clock-dm.html (DM controls)")
     return server
 
 
@@ -300,11 +429,13 @@ if __name__ == "__main__":
     ap.add_argument("--serve", action="store_true", help="host the site on your LAN")
     ap.add_argument("--port", type=int, default=8000, help="port for --serve (default 8000)")
     ap.add_argument("--local", action="store_true", help="with --serve, only accept connections from this computer")
+    ap.add_argument("--soundboard", metavar="URL", help="with --serve, play prowl clock sounds through the tabletop soundboard at URL")
     args = ap.parse_args()
 
     build()
     try:
         if args.serve:
+            clock.soundboard = args.soundboard
             server = serve(args.port, args.local)
             if args.watch:
                 threading.Thread(target=server.serve_forever, daemon=True).start()

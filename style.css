@@ -357,3 +357,35 @@ dt button.spell { font-weight: 600; }
 .results td:nth-child(n+2) { white-space: normal; font-weight: 400; }
 .ballots-head { font-size: 18px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 28px 0 10px; }
 @media (max-width: 720px) { .vote form { grid-template-columns: 1fr; } }
+
+/* ---------- the party (party.js) ---------- */
+.party {
+  display: grid; gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+}
+.party-seat {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 18px 20px 20px;
+}
+.party-seat h2 { font-size: 22px; letter-spacing: .06em; text-align: center; margin-bottom: 14px; }
+/* The primary gets more room than the backup. */
+.party-picks { display: grid; grid-template-columns: 3fr 2fr; gap: 14px; align-items: start; }
+.party-picks > :only-child { grid-column: 1 / -1; max-width: 60%; justify-self: center; }
+.party-card { background: var(--bg); }
+.party-card + .party-card { opacity: .8; }
+.party-card + .party-card:hover { opacity: 1; }
+.party-role {
+  display: block; padding: 10px 12px 0; text-align: center;
+  font-family: var(--display); font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: var(--accent);
+}
+.party-card .card-name { padding-top: 2px; }
+.party-epithet { display: block; padding: 0 12px 12px; margin-top: -6px; text-align: center; color: var(--muted); font-size: 15px; font-style: italic; }
+.party-card.missing { padding-bottom: 12px; border-style: dashed; }
+@media (max-width: 720px) { .party { grid-template-columns: 1fr; } }
+.party-conflict {
+  display: block; margin: 0 12px 12px; padding: 4px 8px; text-align: center;
+  border: 1px dashed var(--accent); border-radius: 4px; color: var(--accent); font-size: 14px; font-style: italic;
+}
+.available-head { margin-bottom: 28px; }
+.available-head h2 { font-size: clamp(28px, 4vw, 40px); letter-spacing: .04em; }
+.available-head .note { margin: 6px 0 0; }
+.roster > .party-card { opacity: 1; }

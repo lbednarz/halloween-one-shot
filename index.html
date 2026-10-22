@@ -15,6 +15,7 @@
   <script src="lore.js"></script>
   <script src="spells.js"></script>
   <script src="characters.js"></script>
+  <script src="party.js"></script>
   <script>
     const app = document.getElementById("app");
     const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -40,7 +41,7 @@
             </a>`).join("")}
         </section>
         ${voteSection()}
-        <footer class="dm-link">${LORE.dmNotes ? `<a href="#/dm-notes">DM Notes</a> · ` : ""}<a href="#/votes">Vote Results</a></footer>`;
+        <footer class="dm-link"><a href="#/party">The Party</a> · ${LORE.dmNotes ? `<a href="#/dm-notes">DM Notes</a> · ` : ""}<a href="#/votes">Vote Results</a></footer>`;
       loadVoters();
     }
 
@@ -136,6 +137,67 @@
       form.querySelector(".unlock-msg").textContent = "Checking…";
       showResults(form.querySelector("input").value);
     });
+
+    // ---------- the chosen party (configured in party.js) ----------
+    // Every character with a lore file can be cast, not just those with a sheet in characters.js.
+    // Lore-only characters get their portrait by filename (bird-keeper -> "the bird keeper.jpg")
+    // and aren't links, since they have no sheet page yet.
+    const castable = () => [
+      ...CHARACTERS.map((c) => c.id),
+      ...Object.keys(LORE.characters).filter((id) => !CHARACTERS.some((c) => c.id === id)).sort(),
+    ];
+    function partyCard(id, role, note = "") {
+      const c = CHARACTERS.find((x) => x.id === id);
+      const l = LORE.characters[id];
+      const roleTag = role ? `<span class="party-role">${role}</span>` : "";
+      if (!c && !l) return `<div class="card party-card missing">${roleTag}<span class="card-name">Unknown character "${esc(id)}"</span></div>`;
+      const { name, epithet } = c ? lore(c) : l;
+      const image = c ? c.image : `character images/the ${id.replace(/-/g, " ")}.jpg`;
+      const inner = `
+          <div class="card-img"><img src="${img(image)}" alt="" loading="lazy"></div>
+          ${roleTag}
+          <span class="card-name">${esc(name)}</span>
+          ${epithet ? `<span class="party-epithet">${esc(epithet)}</span>` : ""}
+          ${note ? `<span class="party-conflict">${note}</span>` : ""}`;
+      return c ? `<a class="card party-card" href="#/${c.id}">${inner}</a>` : `<div class="card party-card">${inner}</div>`;
+    }
+    function renderParty() {
+      document.title = `The Party · ${PREMISE.title}`;
+      const party = typeof PARTY === "undefined" ? [] : PARTY;
+      // Who has claimed each character, to flag picks shared by more than one player.
+      const claims = {};
+      for (const p of party) for (const id of [p.primary, p.secondary].filter(Boolean)) (claims[id] ||= []).push(p.player);
+      const conflict = (id, player) => {
+        const others = claims[id].filter((n) => n !== player);
+        return others.length ? `Also picked by ${esc(others.join(", "))}` : "";
+      };
+      const available = castable().filter((id) => !claims[id]);
+      app.innerHTML = `
+        <nav class="topnav"><a href="#/">← Roster</a></nav>
+        <header class="premise">
+          <p class="tagline">${esc(PREMISE.title)}</p>
+          <h1>The Party</h1>
+          <div class="rule"><span>✦</span></div>
+        </header>
+        <section class="party">
+          ${party.map((p) => `
+            <div class="party-seat">
+              <h2>${esc(p.player)}</h2>
+              <div class="party-picks">
+                ${partyCard(p.primary, "Primary", conflict(p.primary, p.player))}
+                ${p.secondary ? partyCard(p.secondary, "Secondary", conflict(p.secondary, p.player)) : ""}
+              </div>
+            </div>`).join("") || `<p class="note">No one's been cast yet. Fill in party.js.</p>`}
+        </section>
+        <div class="rule"><span>✦</span></div>
+        <header class="premise available-head">
+          <h2>Available</h2>
+          <p class="note">Nobody's primary or secondary yet.</p>
+        </header>
+        <section class="roster">
+          ${available.map((id) => partyCard(id)).join("") || `<p class="note">Every character has been claimed.</p>`}
+        </section>`;
+    }
 
     // ---------- encrypted secrets ----------
     // lore.js holds secrets as { iter, iv, ct, slots: [{ who, salt, iv, key }] } (see build.py).
@@ -418,6 +480,7 @@
       if (c) renderCharacter(c);
       else if (id === "dm-notes" && LORE.dmNotes) renderNotes();
       else if (id === "votes") renderVotes();
+      else if (id === "party") renderParty();
       else renderHome();
       window.scrollTo(0, 0);
     }
